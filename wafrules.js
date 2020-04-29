@@ -27,6 +27,18 @@ const DefaultSettings = {
           },
           MethodTypes: "GET|POST|PUT|PATCH|DELETE|OPTIONS|COPY|HEAD|LOCK|UNLOCK|LINK|UNLINK|PURGE",
           Description: 'Common dangerous Botnets trying to steal information.'
+        },
+        {
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_USER_AGENT | Waf.WAF_MATCH_TYPE.MATCH_ALL_SPECIFIED,
+          ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
+          Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
+          UserAgents:{
+            RegexArray:[/(?:acunetix|analyzer|AhrefsBot|backdoor|bandit|blackwidow|BOT for JCE|core-project|dts agent|emailmagnet|ex(ploit|tract)|flood|grabber|harvest|httrack|havij|hunter|indy library|inspect|LoadTimeBot|mfibot|Microsoft URL Control|Miami Style|morfeus|nessus|NetLyzer|pmafind|scanner|siphon|spbot|sqlmap|survey|teleport|updown_tester|xovibot)/igm],
+            MatchArray:[]
+          },
+          MethodTypes: "GET|POST|PUT|PATCH|DELETE|OPTIONS|COPY|HEAD|LOCK|UNLOCK|LINK|UNLINK|PURGE",
+          Description: 'Known Botnet or Scan tool.'
         }
       ],
       Filters: [
@@ -62,6 +74,25 @@ const DefaultSettings = {
           },
 
           Description: 'Possible Remote File Inclusion attack.'
+        },
+        {
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          MatchTypes:  Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING,
+          ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
+          Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
+
+          QueryStrings:{
+            NameArray: [],
+            MatchArray: [],
+            RegexArray: [/(?:\\x[a-f0-9]{2,4}){25}/igm]
+          },
+
+          ParamStrings:{
+            MatchArray: [],
+            RegexArray: [/(?:\\x[a-f0-9]{2,4}){25}/igm]
+          },
+
+          Description: 'Excessive hexadecimal field.'
         }
       ]
     },
@@ -643,6 +674,162 @@ const DefaultSettings = {
           },
 
           Description: 'SQL Injection by common functions. #1'
+        },
+        {
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_HEADERS | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING,
+          ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
+          Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
+
+          QueryStrings:{
+            NameArray:[],
+            RegexArray:[/(?:\b(?:null|and|or)\b|\|\||&&)\s*.{0,50}\bselect\b./im],
+            MatchArray:[]
+          },
+
+          ParamStrings:{
+            NameArray:[],
+            RegexArray:[/(?:\b(?:null|and|or)\b|\|\||&&)\s*.{0,50}\bselect\b./im],
+            MatchArray:[]
+          },
+
+          Headers:{
+            NameArray:[],
+            RegexArray:[/(?:\b(?:null|and|or)\b|\|\||&&)\s*.{0,50}\bselect\b./im],
+            MatchArray:[]
+          },
+
+          Description: 'Suspicious NULL assertion injection in SQL Injection attack.'
+        },
+        {
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_HEADERS | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING,
+          ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
+          Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
+
+          QueryStrings:{
+            NameArray:[],
+            RegexArray:[/^(?:\b(?:null|and|or)\b|\|\||&&)?\s*union\s+(?:all\s+)?select\b/i],
+            MatchArray:[]
+          },
+
+          ParamStrings:{
+            NameArray:[],
+            RegexArray:[/^(?:\b(?:null|and|or)\b|\|\||&&)?\s*union\s+(?:all\s+)?select\b/i],
+            MatchArray:[]
+          },
+
+          Headers:{
+            NameArray:[],
+            RegexArray:[/^(?:\b(?:null|and|or)\b|\|\||&&)?\s*union\s+(?:all\s+)?select\b/i],
+            MatchArray:[]
+          },
+
+          Description: 'Suspicious NULL assertion based SQL injection.'
+        },
+        {
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_HEADERS | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING,
+          ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
+          Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
+
+          QueryStrings:{
+            NameArray:[],
+            RegexArray:[/^-?\d+.{0,32}(?:\bAND\b.{0,64})?\b(?:UNION|SELECT)\b/im],
+            MatchArray:[]
+          },
+
+          ParamStrings:{
+            NameArray:[],
+            RegexArray:[/^-?\d+.{0,32}(?:\bAND\b.{0,64})?\b(?:UNION|SELECT)\b/im],
+            MatchArray:[]
+          },
+
+          Headers:{
+            NameArray:[],
+            RegexArray:[/^-?\d+.{0,32}(?:\bAND\b.{0,64})?\b(?:UNION|SELECT)\b/im],
+            MatchArray:[]
+          },
+
+          Description: 'Negative number based SQL Injection.'
+        },
+        {
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_HEADERS | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING,
+          ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
+          Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
+
+          QueryStrings:{
+            NameArray:[],
+            RegexArray:[/.{2,}\bORDER\sBY\s*(\d*|\w*)?/im],
+            MatchArray:[]
+          },
+
+          ParamStrings:{
+            NameArray:[],
+            RegexArray:[/.{2,}\bORDER\sBY\s*(\d*|\w*)?/im],
+            MatchArray:[]
+          },
+
+          Headers:{
+            NameArray:[],
+            RegexArray:[/.{2,}\bORDER\sBY\s*(\d*|\w*)?/im],
+            MatchArray:[]
+          },
+
+          Description: 'Order by column based SQL Injection.'
+        },
+        {
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_HEADERS | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING,
+          ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
+          Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
+
+          QueryStrings:{
+            NameArray:[],
+            RegexArray:[/.{2,}\b(UNION|INTERSECT|EXCEPT)\s*SELECT\s*(NULL[,\s]*)+(?:--)/im],
+            MatchArray:[]
+          },
+
+          ParamStrings:{
+            NameArray:[],
+            RegexArray:[/.{2,}\b(UNION|INTERSECT|EXCEPT)\s*SELECT\s*(NULL[,\s]*)+(?:--)/im],
+            MatchArray:[]
+          },
+
+          Headers:{
+            NameArray:[],
+            RegexArray:[/.{2,}\b(UNION|INTERSECT|EXCEPT)\s*SELECT\s*(NULL[,\s]*)+(?:--)/im],
+            MatchArray:[]
+          },
+
+          Description: 'Union, intersect or except based method to SQL Injection.'
+        },
+        {
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_HEADERS | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING,
+          ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
+          Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
+
+          QueryStrings:{
+            NameArray:[],
+            RegexArray:[/^(\'|\s){0,}(OR|AND)(\s{0,1}|\s{0,1}\')\w(\'\s{0,1}|\'){0,1}=(\s{0,1}|\s{0,1}\'|\'){0,1}\w(\'\s{0,1}|\'){0,1}/im],
+            MatchArray:[]
+          },
+
+          ParamStrings:{
+            NameArray:[],
+            RegexArray:[/^(\'|\s){0,}(OR|AND)(\s{0,1}|\s{0,1}\')\w(\'\s{0,1}|\'){0,1}=(\s{0,1}|\s{0,1}\'|\'){0,1}\w(\'\s{0,1}|\'){0,1}/im],
+            MatchArray:[]
+          },
+
+          Headers:{
+            NameArray:[],
+            RegexArray:[/^(\'|\s){0,}(OR|AND)(\s{0,1}|\s{0,1}\')\w(\'\s{0,1}|\'){0,1}=(\s{0,1}|\s{0,1}\'|\'){0,1}\w(\'\s{0,1}|\'){0,1}/im],
+            MatchArray:[]
+          },
+
+          Description: 'Improved tautology assertion based SQL Injection.'
         }
       ]
     }
