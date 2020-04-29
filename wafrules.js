@@ -642,37 +642,8 @@ const DefaultSettings = {
             MatchArray:[]
           },
 
-          Description: 'SQL Injection by common functions.'
-        },
-        {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
-          MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_HEADERS | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING,
-          ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
-          Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
-
-          QueryStrings:{
-            NameArray:[],
-            RegexArray:[/(?:\b|\d)(?:CEIL|CONCAT|CONV|FLOOR|VERSION)\b/igm,
-                        /(?:\b|\d)(?:alter|(?:group_)?concat(?:_ws)?|benchmark|create|database|delete|drop|(?:dump|out)file|extractvalue|grant|insert|is\s+(?:not\s+)?null|limit|load(?:_file)?|order\s+by|password|rename|r?like|select|sleep|substring|table|truncate|union|update|version)\b/igm],
-            MatchArray:[]
-          },
-
-          ParamStrings:{
-            NameArray:[],
-            RegexArray:[/(?:\b|\d)(?:CEIL|CONCAT|CONV|FLOOR|VERSION)\b/igm,
-                        /(?:\b|\d)(?:alter|(?:group_)?concat(?:_ws)?|benchmark|create|database|delete|drop|(?:dump|out)file|extractvalue|grant|insert|is\s+(?:not\s+)?null|limit|load(?:_file)?|order\s+by|password|rename|r?like|select|sleep|substring|table|truncate|union|update|version)\b/igm],
-            MatchArray:[]
-          },
-
-          Headers:{
-            NameArray:[],
-            RegexArray:[/(?:\b|\d)(?:CEIL|CONCAT|CONV|FLOOR|VERSION)\b/igm,
-                        /(?:\b|\d)(?:alter|(?:group_)?concat(?:_ws)?|benchmark|create|database|delete|drop|(?:dump|out)file|extractvalue|grant|insert|is\s+(?:not\s+)?null|limit|load(?:_file)?|order\s+by|password|rename|r?like|select|sleep|substring|table|truncate|union|update|version)\b/igm],
-            MatchArray:[]
-          },
-
-          Description: 'SQL Injection by common functions.'
-        },
+          Description: 'SQL Injection by common functions. #1'
+        }
       ]
     }
   ],
