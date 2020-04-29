@@ -1110,8 +1110,7 @@ function WafSecurityPolicy() {
 function WafBlockConnection(req, res, ptrWafComp){
 	res.Drop();
 	wafutils.DisplayBlockedEvent({reason: ptrWafComp.Description, request: req, wafComp: ptrWafComp});
-	wafutils.WriteEventToLog({reason: ptrWafComp.Description, request: req, wafComp: ptrWafComp}, 'BLOCK', 'events.log');
-	
+	wafutils.WriteEventToLog({reason: ptrWafComp.Description, request: req, wafComp: ptrWafComp}, 'BLOCK', (new Date().toLocaleDateString()).replace(/[\/\:]/ig, '-') + ' Events.log');
 }
 
 //---------------------------------------------------------------------------

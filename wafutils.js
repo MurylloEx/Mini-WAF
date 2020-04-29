@@ -163,38 +163,59 @@ function DisplayAuditEvent(event){
 }
 
 function WriteEventToLog(event, logType, fname) {
-  fs.access(path.join(__dirname, 'mini-waf/', fname), fs.constants.F_OK, (err) => {
-    let WriteCallback = () => {
-      const wfstream = fs.createWriteStream(path.join(__dirname, 'mini-waf/', fname), { flags: 'a' });
-      if (logType.toUpperCase() == 'BLOCK') {
-        wfstream.write(
-          `-> Mini-WAF has protected your server now!${os.EOL}
-           Blocked triggered event by remote IP address: ${event.request.ip} at ${new Date().toLocaleString()}!${os.EOL}
-           Reason of blocking action: ${event.reason}${os.EOL}
-           Method type: ${event.request.method}${os.EOL}
-           Port number: ${String(event.request.connection.localPort)}${os.EOL}
-           Traffic direction: ${String((CheckFlags(event.wafComp.Directions, 0x01) && CheckFlags(event.wafComp.Directions, 0x02) ? 'Inbound | Outbound' : (CheckFlags(event.wafComp.Directions, 0x01) ? 'Inbound' : (CheckFlags(event.wafComp.Directions, 0x02) ? 'Outbound' : 'None'))))}
-           Event code: ${('0x' + Number(new Date().getTime() + Math.floor(10 ** 9 * Math.random())).toString(16))}${os.EOL}${os.EOL}`
-        );
-      }
-      else if (logType.toUpperCase() == 'AUDIT') {
-        wfstream.write(
-          `-> Mini-WAF has detected an event now!${os.EOL}
-           Triggered event by remote IP address: ${event.request.ip} at ${new Date().toLocaleString()}!${os.EOL}
-           Reason of audit action: ${event.reason}${os.EOL}
-           Method type: ${event.request.method}${os.EOL}
-           Port number: ${String(event.request.connection.localPort)}${os.EOL}
-           Traffic direction: ${String((CheckFlags(event.wafComp.Directions, 0x01) && CheckFlags(event.wafComp.Directions, 0x02) ? 'Inbound | Outbound' : (CheckFlags(event.wafComp.Directions, 0x01) ? 'Inbound' : (CheckFlags(event.wafComp.Directions, 0x02) ? 'Outbound' : 'None'))))}
-           Event code: ${('0x' + Number(new Date().getTime() + Math.floor(10 ** 9 * Math.random())).toString(16))}${os.EOL}${os.EOL}`
-        );
-      }
-      wfstream.end();
+
+  console.log(path.join(__dirname, 'logs', fname))
+  let WriteCallback = () => {
+    const wfstream = fs.createWriteStream(path.join(__dirname, 'logs', fname), { flags: 'a' });
+    if (logType.toUpperCase() == 'BLOCK') {
+      wfstream.write(
+        `-> Mini-WAF has protected your server now!${os.EOL}` +
+        `   Blocked triggered event by remote IP address: ${event.request.ip} at ${new Date().toLocaleString()}!${os.EOL}` +
+        `   Reason of blocking action: ${event.reason}${os.EOL}` +
+        `   Method type: ${event.request.method}${os.EOL}` +
+        `   Port number: ${String(event.request.connection.localPort)}${os.EOL}` +
+        `   Traffic direction: ${String((CheckFlags(event.wafComp.Directions, 0x01) && CheckFlags(event.wafComp.Directions, 0x02) ? 'Inbound | Outbound' : (CheckFlags(event.wafComp.Directions, 0x01) ? 'Inbound' : (CheckFlags(event.wafComp.Directions, 0x02) ? 'Outbound' : 'None'))))}${os.EOL}` +
+        `   Event code: ${('0x' + Number(new Date().getTime() + Math.floor(10 ** 9 * Math.random())).toString(16))}${os.EOL}${os.EOL}`
+      );
     }
-    if (!err) {
+    else if (logType.toUpperCase() == 'AUDIT') {
+      wfstream.write(
+        `-> Mini-WAF has detected an event now!${os.EOL}` +
+        ` Triggered event by remote IP address: ${event.request.ip} at ${new Date().toLocaleString()}!${os.EOL}` +
+        ` Reason of audit action: ${event.reason}${os.EOL}` +
+        ` Method type: ${event.request.method}${os.EOL}` +
+        ` Port number: ${String(event.request.connection.localPort)}${os.EOL}` +
+        ` Traffic direction: ${String((CheckFlags(event.wafComp.Directions, 0x01) && CheckFlags(event.wafComp.Directions, 0x02) ? 'Inbound | Outbound' : (CheckFlags(event.wafComp.Directions, 0x01) ? 'Inbound' : (CheckFlags(event.wafComp.Directions, 0x02) ? 'Outbound' : 'None'))))}${os.EOL}` +
+        ` Event code: ${('0x' + Number(new Date().getTime() + Math.floor(10 ** 9 * Math.random())).toString(16))}${os.EOL}${os.EOL}`
+      );
+    }
+    wfstream.end();
+  }
+
+  let CheckAndWrite = () => {
+    fs.access(path.join(__dirname, 'logs'), fs.constants.F_OK, (_err) => {
+      if (_err){
+        fs.writeFile(path.join(__dirname, 'logs', fname), `#========================================= Mini-WAF Log File =========================================#${os.EOL}`, { flags: 'a' }, WriteCallback);
+      }
       WriteCallback();
+    });
+  }
+  fs.access(path.join(__dirname, 'logs'), fs.constants.F_OK, (err) => {
+    if (!err){
+      if (fs.lstatSync(path.join(__dirname, 'logs')).isFile()) {
+        console.log('MINI-WAF ENCOUNTERED AN ERROR!'.bgRed.white);
+        return;
+      }
+      CheckAndWrite();
     }
     else{
-      fs.writeFile(path.join(__dirname, 'mini-waf/', fname), `#========================================= Mini-WAF Log File =========================================#${os.EOL}`, { flags: 'a' }, WriteCallback);
+      try{
+        fs.mkdirSync(path.join(__dirname, 'logs'));
+      } catch(e){
+        console.log('MINI-WAF ENCOUNTERED AN ERROR!'.bgRed.white + os.EOL + 'The log directory cant be created as \'' + path.join(__dirname, 'logs') + '\'');
+        return;
+      }
+      CheckAndWrite();
     }
   });
 }
