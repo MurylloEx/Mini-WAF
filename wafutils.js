@@ -163,8 +163,6 @@ function DisplayAuditEvent(event){
 }
 
 function WriteEventToLog(event, logType, fname) {
-
-  console.log(path.join(__dirname, 'logs', fname))
   let WriteCallback = () => {
     const wfstream = fs.createWriteStream(path.join(__dirname, 'logs', fname), { flags: 'a' });
     if (logType.toUpperCase() == 'BLOCK') {

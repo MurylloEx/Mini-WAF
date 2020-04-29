@@ -22,11 +22,11 @@ npm install mini-waf --save
 const express = require("express");
 const app = express();
 
-const Waf = require('./wafbase');
-const wafrules = require('./wafrules');
+const Waf = require('mini-waf/wafbase');
+const wafrules = require('mini-waf/wafrules');
 
 //Register the middleware of Mini-WAF with standard rules.
-app.use(Waf.WafMiddleware(wafrules.MixedRules));
+app.use(Waf.WafMiddleware(wafrules.DefaultSettings));
 
 //Create your routes in your way!
 app.use((req, res) => {
