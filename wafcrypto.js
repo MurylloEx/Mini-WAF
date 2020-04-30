@@ -56,3 +56,16 @@ function RC4Encrypt(toEncrypt, secretKey){
 function RC4Decrypt(toDecrypt, secretKey){
     return cryptojs.RC4.decrypt(toDecrypt, secretKey);
 }
+
+module.exports = {
+    SHA3OutputLength: SHA3OutputLength,
+    Base64EncodeUTF16: Base64EncodeUTF16,
+    Base64DecodeUTF16: Base64DecodeUTF16,
+    MD5Hash: MD5Hash,
+    SHA1Hash: SHA1Hash,
+    SHA256Hash: SHA256Hash,
+    SHA512Hash: SHA512Hash,
+    SHA3Hash: SHA3Hash,
+    RC4Encrypt: RC4Encrypt,
+    RC4Decrypt: RC4Decrypt
+}
