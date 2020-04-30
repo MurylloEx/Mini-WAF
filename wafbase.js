@@ -4,6 +4,7 @@ const concat = require('concat-stream');
 const querystring = require('querystring');
 const colors = require('colors');
 const uuid = require('uuid').v4;
+const ReadableStreamClone = require('readable-stream-clone/readable-stream-clone');
 
 //---------------------------------------------------------------------------
 
@@ -136,8 +137,7 @@ function WafMiddleware(wafObj) {
 					//------------------------------------------------------------------------------
 
 					if (WafCheckFlags(Dacl.Directions, WAF_RULE_DIRECTION.INBOUND)) {
-						if (WafCheckFlags(Dacl.NetworkLayers, WAF_NETWORK_LAYER.PROTOCOL_IPV4) ||
-							WafCheckFlags(Dacl.NetworkLayers, WAF_NETWORK_LAYER.PROTOCOL_IPV6)) {
+						if (WafCheckFlags(Dacl.NetworkLayers, WAF_NETWORK_LAYER.PROTOCOL_IPV4) || WafCheckFlags(Dacl.NetworkLayers, WAF_NETWORK_LAYER.PROTOCOL_IPV6)) {
 
 							let Hooks = [];
 
@@ -731,7 +731,7 @@ function WafMiddleware(wafObj) {
 										if (typeof arguments['1'] == 'string'){
 											if (!PayloadsMatchStatus) {
 												for (let x = 0; x < Filter.Payloads.RegexArray.length; x++) {
-													if (Filter.Payloads.RegexArray[x].test(arguments['1'])) {
+													if (new RegExp(Filter.Payloads.RegexArray[x]).test(arguments['1'])) {
 														PayloadsMatchStatus = true;
 														break;
 													}
@@ -763,7 +763,7 @@ function WafMiddleware(wafObj) {
 											if (EndData != null) {
 												if (!PayloadsMatchStatus) {
 													for (let x = 0; x < Filter.Payloads.RegexArray.length; x++) {
-														if (Filter.Payloads.RegexArray[x].test(EndData)) {
+														if (new RegExp(Filter.Payloads.RegexArray[x]).test(EndData)) {
 															PayloadsMatchStatus = true;
 															break;
 														}
@@ -872,7 +872,7 @@ function WafMiddleware(wafObj) {
 												let JsonData = JSON.parse(arguments['1']);
 												if (!PayloadsMatchStatus) {
 													for (let x = 0; x < Filter.Payloads.RegexArray.length; x++) {
-														if (Filter.Payloads.RegexArray[x].test(JsonData)) {
+														if (new RegExp(Filter.Payloads.RegexArray[x]).test(JsonData)) {
 															PayloadsMatchStatus = true;
 															break;
 														}
@@ -895,7 +895,7 @@ function WafMiddleware(wafObj) {
 												let JsonpData = JSON.parse(arguments['1']);
 												if (!PayloadsMatchStatus) {
 													for (let x = 0; x < Filter.Payloads.RegexArray.length; x++) {
-														if (Filter.Payloads.RegexArray[x].test(JsonpData)) {
+														if (new RegExp(Filter.Payloads.RegexArray[x]).test(JsonpData)) {
 															PayloadsMatchStatus = true;
 															break;
 														}
@@ -928,7 +928,7 @@ function WafMiddleware(wafObj) {
 											if (WriteData != null) {
 												if (!PayloadsMatchStatus) {
 													for (let x = 0; x < Filter.Payloads.RegexArray.length; x++) {
-														if (Filter.Payloads.RegexArray[x].test(WriteData)) {
+														if (new RegExp(Filter.Payloads.RegexArray[x]).test(WriteData)) {
 															PayloadsMatchStatus = true;
 															break;
 														}
@@ -1068,7 +1068,7 @@ function WafMiddleware(wafObj) {
 			
 		}
 
-		req.pipe(concat(function(data){
+		(new ReadableStreamClone(req)).pipe(concat(function(data){
 			req.rawBody = data.toString('utf8');
 		})).on('finish', WafEngine);
 
