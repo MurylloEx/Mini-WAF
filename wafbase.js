@@ -4,7 +4,7 @@ const concat = require('concat-stream');
 const querystring = require('querystring');
 const colors = require('colors');
 const uuid = require('uuid').v4;
-const ReadableStreamClone = require('readable-stream-clone/readable-stream-clone');
+const CloneStream = require('readable-stream-clone/readable-stream-clone');
 
 //---------------------------------------------------------------------------
 
@@ -1068,9 +1068,18 @@ function WafMiddleware(wafObj) {
 			
 		}
 
-		(new ReadableStreamClone(req)).pipe(concat(function(data){
+		let cloned = new CloneStream(req);
+		let reqcloned = new CloneStream(req);
+		cloned.pipe(concat(function(data){
 			req.rawBody = data.toString('utf8');
-		})).on('finish', WafEngine);
+			for (let obj in reqcloned){
+				if (typeof req[obj] != "undefined"){
+					 req[obj] = reqcloned[obj];
+				}
+			}
+		})).on('finish', () => {
+			WafEngine();
+		});
 
 	}
 }
