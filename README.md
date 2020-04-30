@@ -4,6 +4,14 @@
 <img src="https://user-images.githubusercontent.com/32225687/78806753-849c1480-7999-11ea-8ad5-4f15ce5ad5fa.png" data-canonical-src="https://user-images.githubusercontent.com/32225687/78806753-849c1480-7999-11ea-8ad5-4f15ce5ad5fa.png" width="192" height="192"/>
 </p>
 
+<p align="center">
+<img src="https://badgen.net/npm/v/mini-waf"/>
+<img src="https://badgen.net/npm/dw/mini-waf"/>
+<img src="https://badgen.net/npm/license/mini-waf"/>
+<img src="https://badgen.net/npm/types/mini-waf"/>
+<img src="https://badgen.net/badge/author/MurylloEx/red?icon=label"/>
+</p>
+
 ## Getting started into Mini-WAF!
 <p align="justify">A Minimalistic Web Application Firewall for your purposes in NodeJS servers. It will protect your servers against XSS, XSRF, DOS, LFI, SQL Injection, Unauthorized Remote Access, Unhandled Exceptions and Botnets attacks. Mini-WAF is a Minimalistic Web Application Firewall that avoid and block several attacks in HTTP and HTTPS protocols with a great support to IPv4 and IPv6.</p>
 
