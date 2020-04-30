@@ -657,19 +657,19 @@ const DefaultSettings = {
 
           QueryStrings:{
             NameArray:[],
-            RegexArray:[/(?:\b|\d)(?:CEIL|CONCAT|CONV|FLOOR|VERSION)\b/igm],
+            RegexArray:[/^(?:\b|\d)+\s(?:CEIL|CONCAT|CONV|FLOOR|VERSION)\b/ig],
             MatchArray:[]
           },
 
           ParamStrings:{
             NameArray:[],
-            RegexArray:[/(?:\b|\d)(?:CEIL|CONCAT|CONV|FLOOR|VERSION)\b/igm],
+            RegexArray:[/^(?:\b|\d)+\s(?:CEIL|CONCAT|CONV|FLOOR|VERSION)\b/ig],
             MatchArray:[]
           },
 
           Headers:{
             NameArray:[],
-            RegexArray:[/(?:\b|\d)(?:CEIL|CONCAT|CONV|FLOOR|VERSION)\b/igm],
+            RegexArray:[/^(?:\b|\d)+\s(?:CEIL|CONCAT|CONV|FLOOR|VERSION)\b/ig],
             MatchArray:[]
           },
 

@@ -8,6 +8,10 @@
 <p align="justify">A Minimalistic Web Application Firewall for your purposes in NodeJS servers. It will protect your servers against XSS, XSRF, DOS, LFI, SQL Injection, Unauthorized Remote Access, Unhandled Exceptions and Botnets attacks. Mini-WAF is a Minimalistic Web Application Firewall that avoid and block several attacks in HTTP and HTTPS protocols with a great support to IPv4 and IPv6.</p>
 
 ## Installation
+
+<p align="center">
+<img src="https://nodei.co/npm/mini-waf.png?downloads=true&downloadRank=true&stars=true"/>
+</p>
 <p align="justify">You must run the following terminal command in same path of your project.<p>
   
 ```

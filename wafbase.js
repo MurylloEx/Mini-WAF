@@ -60,9 +60,9 @@ function WafMiddleware(wafObj) {
 
 		//Guarda as funções originais de I/O com decoradores __unhooked__original__
 		res.__unhooked__original__send		= res.send;
-		res.__unhooked__original__end			= res.end;
+		res.__unhooked__original__end		= res.end;
 		res.__unhooked__original__write		= res.write;
-		res.__unhooked__original__set			= res.set;
+		res.__unhooked__original__set		= res.set;
 		res.__unhooked__original__header	= res.header;
 		res.__unhooked__original__json		= res.json;
 		res.__unhooked__original__jsonp		= res.jsonp;
