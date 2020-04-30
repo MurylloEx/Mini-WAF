@@ -832,7 +832,25 @@ const DefaultSettings = {
           Description: 'Improved tautology assertion based SQL Injection.'
         }
       ]
-    }
+    },
+    {
+      Dacls: [],
+      Filters: [
+        {
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          MatchTypes:  Waf.WAF_MATCH_TYPE.MATCH_ATTEMPTS,
+          ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
+          Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
+
+          Attempts: {
+            MaxAttempts: 32,
+            RenewAttemptsInterval: 900
+          },
+
+          Description: 'Possible Denial of Service attack.'
+        }
+      ]
+    },
   ],
   Callbacks: [],
   AccessTable: []
