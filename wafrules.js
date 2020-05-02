@@ -84,6 +84,25 @@ const DefaultSettings = {
           QueryStrings:{
             NameArray: [],
             MatchArray: [],
+            RegexArray: [/^(?:ftp):\/\/[^\/]+\/.+/i]
+          },
+
+          ParamStrings:{
+            MatchArray: [],
+            RegexArray: [/^(?:ftp):\/\/[^\/]+\/.+/i]
+          },
+
+          Description: 'Possible Remote File Inclusion attack by remote FTP host.'
+        },
+        {
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          MatchTypes:  Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING,
+          ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
+          Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
+
+          QueryStrings:{
+            NameArray: [],
+            MatchArray: [],
             RegexArray: [/(?:\\x[a-f0-9]{2,4}){25}/igm]
           },
 
@@ -107,13 +126,13 @@ const DefaultSettings = {
 
           QueryStrings:{
             NameArray:[],
-            RegexArray:[/(\.\.\/|\.\.%2F)+.?/igm],
+            RegexArray:[/(\.\.(\/|\\)|\.\.%(2F|5C))+/igm],
             MatchArray:[]
           },
 
           ParamStrings:{
             NameArray:[],
-            RegexArray:[/(\.\.\/|\.\.%2F)+.?/igm],
+            RegexArray:[/(\.\.(\/|\\)|\.\.%(2F|5C))+/igm],
             MatchArray:[]
           },
 
@@ -838,19 +857,242 @@ const DefaultSettings = {
       Filters: [
         {
           NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_HEADERS | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING,
+          ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
+          Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
+
+          QueryStrings:{
+            NameArray:[],
+            RegexArray:[/\x00/gm],
+            MatchArray:[]
+          },
+
+          ParamStrings:{
+            NameArray:[],
+            RegexArray:[/\x00/gm],
+            MatchArray:[]
+          },
+
+          Headers:{
+            NameArray:[],
+            RegexArray:[/\x00/gm],
+            MatchArray:[]
+          },
+
+          Description: 'ASCII character 0x00 (NULL BYTE) injection attack.'
+        }
+      ]
+    },
+    {
+      Dacls: [],
+      Filters: [
+        {
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_HEADERS | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING | Waf.WAF_MATCH_TYPE.MATCH_PAYLOAD,
+          ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
+          Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
+
+          QueryStrings:{
+            NameArray:[],
+            RegexArray:[/\bFunction\s*[({](.|\s)*?[})]\s*\(.*?\)|\bfunction\s*\(.*?\)\s*{(.|\s)*?}|(?:\[|new)\s*class\s*extends\b|\bArray\s*.*\s*from\b/igm],
+            MatchArray:[]
+          },
+
+          ParamStrings:{
+            NameArray:[],
+            RegexArray:[/\bFunction\s*[({](.|\s)*?[})]\s*\(.*?\)|\bfunction\s*\(.*?\)\s*{(.|\s)*?}|(?:\[|new)\s*class\s*extends\b|\bArray\s*.*\s*from\b/igm],
+            MatchArray:[]
+          },
+
+          Headers:{
+            NameArray:[],
+            RegexArray:[/\bFunction\s*[({](.|\s)*?[})]\s*\(.*?\)|\bfunction\s*\(.*?\)\s*{(.|\s)*?}|(?:\[|new)\s*class\s*extends\b|\bArray\s*.*\s*from\b/igm],
+            MatchArray:[]
+          },
+
+          Payloads:{
+            RegexArray:[/\bFunction\s*[({](.|\s)*?[})]\s*\(.*?\)|\bfunction\s*\(.*?\)\s*{(.|\s)*?}|(?:\[|new)\s*class\s*extends\b|\bArray\s*.*\s*from\b/igm],
+            MatchArray:[]
+          },
+
+          Description: 'XSS attack by function, class or array injection.'
+        },
+        {
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_HEADERS | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING | Waf.WAF_MATCH_TYPE.MATCH_PAYLOAD,
+          ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
+          Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
+
+          QueryStrings:{
+            NameArray:[],
+            RegexArray:[/\b(?:document|window|this)\s*\[.+?\]\s*[\[(]/igm],
+            MatchArray:[]
+          },
+
+          ParamStrings:{
+            NameArray:[],
+            RegexArray:[/\b(?:document|window|this)\s*\[.+?\]\s*[\[(]/igm],
+            MatchArray:[]
+          },
+
+          Headers:{
+            NameArray:[],
+            RegexArray:[/\b(?:document|window|this)\s*\[.+?\]\s*[\[(]/igm],
+            MatchArray:[]
+          },
+
+          Payloads:{
+            RegexArray:[/\b(?:document|window|this)\s*\[.+?\]\s*[\[(]/igm],
+            MatchArray:[]
+          },
+
+          Description: 'XSS DOM based injection.'
+        },
+        {
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_HEADERS | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING | Waf.WAF_MATCH_TYPE.MATCH_PAYLOAD,
+          ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
+          Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
+
+          QueryStrings:{
+            NameArray:[],
+            RegexArray:[/<.+?\bon[a-z]{3,19}\b\s*=.+?>/igm],
+            MatchArray:[]
+          },
+
+          ParamStrings:{
+            NameArray:[],
+            RegexArray:[/<.+?\bon[a-z]{3,19}\b\s*=.+?>/igm],
+            MatchArray:[]
+          },
+
+          Headers:{
+            NameArray:[],
+            RegexArray:[/<.+?\bon[a-z]{3,19}\b\s*=.+?>/igm],
+            MatchArray:[]
+          },
+
+          Payloads:{
+            RegexArray:[/<.+?\bon[a-z]{3,19}\b\s*=.+?>/igm],
+            MatchArray:[]
+          },
+
+          Description: 'XSS DOM based by HTML event attributes.'
+        },
+        {
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_HEADERS | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING | Waf.WAF_MATCH_TYPE.MATCH_PAYLOAD,
+          ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
+          Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
+
+          QueryStrings:{
+            NameArray:[],
+            RegexArray:[/\bdocument\s*\.\s*(?:body|cookie|location|open|write(?:ln)?)\s*(\(|\[|\=\s*(\"|\')+)+.*(\)|\]|(\"|\')+)+/igm],
+            MatchArray:[]
+          },
+
+          ParamStrings:{
+            NameArray:[],
+            RegexArray:[/\bdocument\s*\.\s*(?:body|cookie|location|open|write(?:ln)?)\s*(\(|\[|\=\s*(\"|\')+)+.*(\)|\]|(\"|\')+)+/igm],
+            MatchArray:[]
+          },
+
+          Headers:{
+            NameArray:[],
+            RegexArray:[/\bdocument\s*\.\s*(?:body|cookie|location|open|write(?:ln)?)\s*(\(|\[|\=\s*(\"|\')+)+.*(\)|\]|(\"|\')+)+/igm],
+            MatchArray:[]
+          },
+
+          Payloads:{
+            RegexArray:[/\bdocument\s*\.\s*(?:body|cookie|location|open|write(?:ln)?)\s*(\(|\[|\=\s*(\"|\')+)+.*(\)|\]|(\"|\')+)+/igm],
+            MatchArray:[]
+          },
+
+          Description: 'XSS DOM based injection.'
+        },
+        {
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_HEADERS | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING | Waf.WAF_MATCH_TYPE.MATCH_PAYLOAD,
+          ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
+          Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
+
+          QueryStrings:{
+            NameArray:[],
+            RegexArray:[/<.+?\b(?:href|(?:form)?action|background|code|data|location|name|poster|src|value)\s*=\s*['\"]?(?:(?:f|ht)tps?:)?\/\/\w+\.\w*/igm],
+            MatchArray:[]
+          },
+
+          ParamStrings:{
+            NameArray:[],
+            RegexArray:[/<.+?\b(?:href|(?:form)?action|background|code|data|location|name|poster|src|value)\s*=\s*['\"]?(?:(?:f|ht)tps?:)?\/\/\w+\.\w*/igm],
+            MatchArray:[]
+          },
+
+          Headers:{
+            NameArray:[],
+            RegexArray:[/<.+?\b(?:href|(?:form)?action|background|code|data|location|name|poster|src|value)\s*=\s*['\"]?(?:(?:f|ht)tps?:)?\/\/\w+\.\w*/igm],
+            MatchArray:[]
+          },
+
+          Payloads:{
+            RegexArray:[/<.+?\b(?:href|(?:form)?action|background|code|data|location|name|poster|src|value)\s*=\s*['\"]?(?:(?:f|ht)tps?:)?\/\/\w+\.\w*/igm],
+            MatchArray:[]
+          },
+
+          Description: 'XSS DOM poisoning based by common attributes.'
+        },
+        {
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_HEADERS | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING | Waf.WAF_MATCH_TYPE.MATCH_PAYLOAD,
+          ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
+          Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
+
+          QueryStrings:{
+            NameArray:[],
+            RegexArray:[/\W(?:background(-image)?|-moz-binding)\s*:[^}]*?\burl\s*\([^)]+?(https?:)?\/\/\w/igm],
+            MatchArray:[]
+          },
+
+          ParamStrings:{
+            NameArray:[],
+            RegexArray:[/\W(?:background(-image)?|-moz-binding)\s*:[^}]*?\burl\s*\([^)]+?(https?:)?\/\/\w/igm],
+            MatchArray:[]
+          },
+
+          Headers:{
+            NameArray:[],
+            RegexArray:[/\W(?:background(-image)?|-moz-binding)\s*:[^}]*?\burl\s*\([^)]+?(https?:)?\/\/\w/igm],
+            MatchArray:[]
+          },
+
+          Payloads:{
+            RegexArray:[/\W(?:background(-image)?|-moz-binding)\s*:[^}]*?\burl\s*\([^)]+?(https?:)?\/\/\w/igm],
+            MatchArray:[]
+          },
+
+          Description: 'XSS possible deface attack by embedded (S)CSS attributes.'
+        },
+      ]
+    },
+
+    {
+      Dacls: [],
+      Filters: [
+        {
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes:  Waf.WAF_MATCH_TYPE.MATCH_ATTEMPTS,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
 
           Attempts: {
-            MaxAttempts: 32,
-            RenewAttemptsInterval: 900
+            MaxAttempts: 1024,
+            RenewAttemptsInterval: 32
           },
 
           Description: 'Possible Denial of Service attack.'
         }
       ]
-    },
+    }
   ],
   Callbacks: [],
   AccessTable: []
