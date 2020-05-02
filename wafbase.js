@@ -72,7 +72,7 @@ function WafMiddleware(wafObj) {
 		res.Drop = function(){ req.Blocked = res.Blocked = true; res.__unhooked__original__status(403).__unhooked__original__end(); }
 
 		let WafEngine = function () {
-			let IpAddress = (req.headers['x-forwarded-for'] || '').split(',')[0] || req.connection.remoteAddress || req.socket.remoteAddress || req.connection.socket.remoteAddress;
+			let IpAddress = (req.headers['x-forwarded-for'] || '').split(',')[0] || req.connection.remoteAddress || req.socket.remoteAddress || req.connection.socket.remoteAddress || '';
 			let cookies = wafutils.CookieParse(req.headers.cookie, {});
 			let BlockStatus = false;
 			let PermitStatus = false;
@@ -621,13 +621,21 @@ function WafMiddleware(wafObj) {
 
 					if (WafCheckFlags(Filter.MatchTypes, WAF_MATCH_TYPE.MATCH_ATTEMPTS)) {
 						try {
-							let attemptAccess = wafutils.AddEntryInAccessTable(wafObj, Filter, req.ip, Filter.NetworkLayers);
-							if (attemptAccess.Exceeded == true){
-								AttemptsMatchStatus = true;
+							if (Ip.isV4Format(req.ip) || Ip.isV6Format(req.ip)){
+								let attemptAccess = {};
+								if (Ip.isV4Format(req.ip) && WafCheckFlags(Filter.NetworkLayers, WAF_NETWORK_LAYER.PROTOCOL_IPV4)) {
+									attemptAccess = wafutils.AddEntryInAccessTable(wafObj, Filter, req.ip, WAF_NETWORK_LAYER.PROTOCOL_IPV4);
+								}
+								if (Ip.isV6Format(req.ip) && WafCheckFlags(Filter.NetworkLayers, WAF_NETWORK_LAYER.PROTOCOL_IPV6)) {
+									attemptAccess = wafutils.AddEntryInAccessTable(wafObj, Filter, req.ip, WAF_NETWORK_LAYER.PROTOCOL_IPV6);
+								}
+								if (attemptAccess.Exceeded == true){
+									AttemptsMatchStatus = true;
+								}
+								res.set('X-RateLimit-Limit', Filter.Attempts.MaxAttempts);
+								res.set('X-RateLimit-Remaining', attemptAccess.RemainingAttempts);
+								res.set('X-RateLimit-Current', attemptAccess.CurrentAttempts);
 							}
-							res.set('X-RateLimit-Limit', Filter.Attempts.MaxAttempts);
-							res.set('X-RateLimit-Remaining', attemptAccess.RemainingAttempts);
-							res.set('X-RateLimit-Current', attemptAccess.CurrentAttempts);
 						} catch (e) { }
 					}
 
