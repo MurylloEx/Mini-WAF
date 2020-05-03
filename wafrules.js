@@ -1074,7 +1074,374 @@ const DefaultSettings = {
         },
       ]
     },
+    {
+      Dacls: [
+        {
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_USER_AGENT,
+          ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
+          Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
+          UserAgents:{
+            RegexArray:[/^(\uff07|\d\s*\uff07)/gm],
+            MatchArray:[]
+          },
+          Description: 'SQL Injection single quote UTF-16 beginning string.'
+        }
+      ],
+      Filters: [
+        {
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_PAYLOAD | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING,
+          ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
+          Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
 
+          QueryStrings:{
+            NameArray:[],
+            RegexArray:[/^(\uff07|\d\s*\uff07)/gm],
+            MatchArray:[]
+          },
+
+          ParamStrings:{
+            NameArray:[],
+            RegexArray:[/^(\uff07|\d\s*\uff07)/gm],
+            MatchArray:[]
+          },
+
+          Payloads:{
+            RegexArray:[/^(\uff07|\d\s*\uff07)/gm],
+            MatchArray:[]
+          },
+
+          Description: 'SQL Injection single quote UTF-16 beginning string.'
+        },
+        {
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_PAYLOAD | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING,
+          ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
+          Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
+
+          QueryStrings:{
+            NameArray:[],
+            RegexArray:[/^(\d*|\w*)\s*(\'|\uff07)?\s*\)\s*(OR|AND)/igm],
+            MatchArray:[]
+          },
+
+          ParamStrings:{
+            NameArray:[],
+            RegexArray:[/^(\d*|\w*)\s*(\'|\uff07)?\s*\)\s*(OR|AND)/igm],
+            MatchArray:[]
+          },
+
+          Payloads:{
+            RegexArray:[/^(\d*|\w*)\s*(\'|\uff07)?\s*\)\s*(OR|AND)/igm],
+            MatchArray:[]
+          },
+
+          Description: 'SQL Injection boolean blind based #1.'
+        },
+        {
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_PAYLOAD | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING,
+          ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
+          Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
+
+          QueryStrings:{
+            NameArray:[],
+            RegexArray:[/^(\d*|\w*)\s*(\'|\uff07)?\s*\)\s*(ORDER\s*BY|UNION\s*ALL\s*)/igm],
+            MatchArray:[]
+          },
+
+          ParamStrings:{
+            NameArray:[],
+            RegexArray:[/^(\d*|\w*)\s*(\'|\uff07)?\s*\)\s*(ORDER\s*BY|UNION\s*ALL\s*)/igm],
+            MatchArray:[]
+          },
+
+          Payloads:{
+            RegexArray:[/^(\d*|\w*)\s*(\'|\uff07)?\s*\)\s*(ORDER\s*BY|UNION\s*ALL\s*)/igm],
+            MatchArray:[]
+          },
+
+          Description: 'SQL Injection "UNION" or "ORDER BY" based #1.'
+        },
+        {
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_PAYLOAD | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING,
+          ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
+          Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
+
+          QueryStrings:{
+            NameArray:[],
+            RegexArray:[/^(\d*|\w*)\s*(\'|\uff07)?\s*\)*\s*(ORDER\s*BY|UNION\s*ALL)\s*(SELECT|ORDER\s*BY)*/igm],
+            MatchArray:[]
+          },
+
+          ParamStrings:{
+            NameArray:[],
+            RegexArray:[/^(\d*|\w*)\s*(\'|\uff07)?\s*\)*\s*(ORDER\s*BY|UNION\s*ALL)\s*(SELECT|ORDER\s*BY)*/igm],
+            MatchArray:[]
+          },
+
+          Payloads:{
+            RegexArray:[/^(\d*|\w*)\s*(\'|\uff07)?\s*\)*\s*(ORDER\s*BY|UNION\s*ALL)\s*(SELECT|ORDER\s*BY)*/igm],
+            MatchArray:[]
+          },
+
+          Description: 'SQL Injection "UNION" or "ORDER BY" based #2.'
+        },
+        {
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_PAYLOAD | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING,
+          ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
+          Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
+
+          QueryStrings:{
+            NameArray:[],
+            RegexArray:[/^(\d*|\w*)\s*(\'|\uff07)?\s*\)*\s*(OR|AND)\s*\w*\=?\w*/igm],
+            MatchArray:[]
+          },
+
+          ParamStrings:{
+            NameArray:[],
+            RegexArray:[/^(\d*|\w*)\s*(\'|\uff07)?\s*\)*\s*(OR|AND)\s*\w*\=?\w*/igm],
+            MatchArray:[]
+          },
+
+          Payloads:{
+            RegexArray:[/^(\d*|\w*)\s*(\'|\uff07)?\s*\)*\s*(OR|AND)\s*\w*\=?\w*/igm],
+            MatchArray:[]
+          },
+
+          Description: 'SQL Injection boolean blind based #2.'
+        },
+        {
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_PAYLOAD | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING,
+          ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
+          Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
+
+          QueryStrings:{
+            NameArray:[],
+            RegexArray:[/^(\d*|\w*)\s*(\'|\uff07|\")?\s*\)*\s*(RLIKE|WAITFOR)\s*\w*/igm],
+            MatchArray:[]
+          },
+
+          ParamStrings:{
+            NameArray:[],
+            RegexArray:[/^(\d*|\w*)\s*(\'|\uff07|\")?\s*\)*\s*(RLIKE|WAITFOR)\s*\w*/igm],
+            MatchArray:[]
+          },
+
+          Payloads:{
+            RegexArray:[/^(\d*|\w*)\s*(\'|\uff07|\")?\s*\)*\s*(RLIKE|WAITFOR)\s*\w*/igm],
+            MatchArray:[]
+          },
+
+          Description: 'SQL Injection using "RLIKE" or "WAITFOR" command.'
+        },
+        {
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_PAYLOAD | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING,
+          ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
+          Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
+
+          QueryStrings:{
+            NameArray:[],
+            RegexArray:[/^(\d*|\w*)\s*(\'|\uff07|\")?\s*\)*\s*;(SELECT|WAITFOR|DECLARE)\s*\w*/igm],
+            MatchArray:[]
+          },
+
+          ParamStrings:{
+            NameArray:[],
+            RegexArray:[/^(\d*|\w*)\s*(\'|\uff07|\")?\s*\)*\s*;(SELECT|WAITFOR|DECLARE)\s*\w*/igm],
+            MatchArray:[]
+          },
+
+          Payloads:{
+            RegexArray:[/^(\d*|\w*)\s*(\'|\uff07|\")?\s*\)*\s*;(SELECT|WAITFOR|DECLARE)\s*\w*/igm],
+            MatchArray:[]
+          },
+
+          Description: 'SQL Injection using "SELECT", "WAITFOR" or "DECLARE" command.'
+        }
+      ]
+    },
+    {
+      Dacls: [],
+      Filters: [
+        {
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_PAYLOAD | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING,
+          ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
+          Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
+
+          QueryStrings:{
+            NameArray:[],
+            RegexArray:[/^-?(\d*|\w*)\s*(\'|\uff07|\")?\s*(\)){0,3}\s*(ORDER\s*BY|UNION\s*ALL\s*)/igm],
+            MatchArray:[]
+          },
+
+          ParamStrings:{
+            NameArray:[],
+            RegexArray:[/^-?(\d*|\w*)\s*(\'|\uff07|\")?\s*(\)){0,3}\s*(ORDER\s*BY|UNION\s*ALL\s*)/igm],
+            MatchArray:[]
+          },
+
+          Payloads:{
+            NameArray:[],
+            RegexArray:[/^-?(\d*|\w*)\s*(\'|\uff07|\")?\s*(\)){0,3}\s*(ORDER\s*BY|UNION\s*ALL\s*)/igm],
+            MatchArray:[]
+          },
+
+          Description: 'Advanced SQL injection using "ORDER BY" or "UNION" operators.'
+        },
+        {
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_PAYLOAD | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING,
+          ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
+          Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
+
+          QueryStrings:{
+            NameArray:[],
+            RegexArray:[/^-?(\d*|\w*)\s*(\'|\uff07|\")?\s*(\)){0,3}\s*(AND|OR)\s*/igm],
+            MatchArray:[]
+          },
+
+          ParamStrings:{
+            NameArray:[],
+            RegexArray:[/^-?(\d*|\w*)\s*(\'|\uff07|\")?\s*(\)){0,3}\s*(AND|OR)\s*/igm],
+            MatchArray:[]
+          },
+
+          Payloads:{
+            NameArray:[],
+            RegexArray:[/^-?(\d*|\w*)\s*(\'|\uff07|\")?\s*(\)){0,3}\s*(AND|OR)\s*/igm],
+            MatchArray:[]
+          },
+
+          Description: 'Advanced SQL injection boolean blind based.'
+        },
+        {
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_PAYLOAD | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING,
+          ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
+          Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
+
+          QueryStrings:{
+            NameArray:[],
+            RegexArray:[/^-?(\d*|\w*)\s*(\'|\uff07|\")?\s*(\)){0,3};\s*(SELECT|DECLARE|WAITFOR|CREATE|\()\s*/igm],
+            MatchArray:[]
+          },
+
+          ParamStrings:{
+            NameArray:[],
+            RegexArray:[/^-?(\d*|\w*)\s*(\'|\uff07|\")?\s*(\)){0,3};\s*(SELECT|DECLARE|WAITFOR|CREATE|\()\s*/igm],
+            MatchArray:[]
+          },
+
+          Payloads:{
+            NameArray:[],
+            RegexArray:[/^-?(\d*|\w*)\s*(\'|\uff07|\")?\s*(\)){0,3};\s*(SELECT|DECLARE|WAITFOR|CREATE|\()\s*/igm],
+            MatchArray:[]
+          },
+
+          Description: 'Advanced SQL injection using "SELECT", "DECLARE", "WAITFOR" or "CREATE" methods.'
+        },
+        {
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_PAYLOAD | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING,
+          ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
+          Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
+
+          QueryStrings:{
+            NameArray:[],
+            RegexArray:[/^-?\w*(\'|\"|\uff07)*\s*[\(\)]{1,3}\s*(AND|SELECT|WHERE|AS|;)/igm],
+            MatchArray:[]
+          },
+
+          ParamStrings:{
+            NameArray:[],
+            RegexArray:[/^-?\w*(\'|\"|\uff07)*\s*[\(\)]{1,3}\s*(AND|SELECT|WHERE|AS|;)/igm],
+            MatchArray:[]
+          },
+
+          Payloads:{
+            NameArray:[],
+            RegexArray:[/^-?\w*(\'|\"|\uff07)*\s*[\(\)]{1,3}\s*(AND|SELECT|WHERE|AS|;)/igm],
+            MatchArray:[]
+          },
+
+          Description: 'Advanced SQL injection using very dangerous SQLMap Payloads LEVEL 4.'
+        }
+      ]
+    },
+    {
+      Dacls: [],
+      Filters: [
+        {
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_HEADERS | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING | Waf.WAF_MATCH_TYPE.MATCH_PAYLOAD,
+          ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
+          Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
+
+          QueryStrings:{
+            NameArray:[],
+            RegexArray:[/^(%u(\w{2}|\w{4})){16}/gm],
+            MatchArray:[]
+          },
+
+          ParamStrings:{
+            NameArray:[],
+            RegexArray:[/^(%u(\w{2}|\w{4})){16}/gm],
+            MatchArray:[]
+          },
+
+          Headers:{
+            NameArray:[],
+            RegexArray:[/^(%u(\w{2}|\w{4})){16}/gm],
+            MatchArray:[]
+          },
+
+          Payloads:{
+            RegexArray:[/^(%u(\w{2}|\w{4})){16}/gm],
+            MatchArray:[]
+          },
+
+          Description: 'Possible UTF-8/16 encoded and obfuscated payload injection.'
+        },
+        {
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_HEADERS | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING | Waf.WAF_MATCH_TYPE.MATCH_PAYLOAD,
+          ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
+          Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
+
+          QueryStrings:{
+            NameArray:[],
+            RegexArray:[/\b(XDEBUG_SESSION_START|invokefunction|call_user_func_array)\b/igm],
+            MatchArray:[]
+          },
+
+          ParamStrings:{
+            NameArray:[],
+            RegexArray:[/\b(XDEBUG_SESSION_START|invokefunction|call_user_func_array)\b/igm],
+            MatchArray:[]
+          },
+
+          Headers:{
+            NameArray:[],
+            RegexArray:[/\b(XDEBUG_SESSION_START|invokefunction|call_user_func_array)\b/igm],
+            MatchArray:[]
+          },
+
+          Payloads:{
+            RegexArray:[/\b(XDEBUG_SESSION_START|invokefunction|call_user_func_array)\b/igm],
+            MatchArray:[]
+          },
+
+          Description: 'Remote code execution (RCE) attack attempt.'
+        },
+      ]
+    },
     {
       Dacls: [],
       Filters: [

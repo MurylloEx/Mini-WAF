@@ -72,7 +72,7 @@ function WafMiddleware(wafObj) {
 		res.Drop = function(){ req.Blocked = res.Blocked = true; res.__unhooked__original__status(403).__unhooked__original__end(); }
 
 		let WafEngine = function () {
-			let IpAddress = (req.headers['x-forwarded-for'] || '').split(',')[0] || req.connection.remoteAddress || req.socket.remoteAddress || req.connection.socket.remoteAddress || '';
+			let IpAddress = (req.headers['x-forwarded-for'] || '').split(',')[0] || req.connection.remoteAddress || req.socket.remoteAddress || '';
 			let cookies = wafutils.CookieParse(req.headers.cookie, {});
 			let BlockStatus = false;
 			let PermitStatus = false;
@@ -1065,6 +1065,8 @@ function WafMiddleware(wafObj) {
 					wafObj.Callbacks[idx].Callback(req, res);
 				}
 				if (!req.Blocked && !res.Blocked){
+					//Display the incoming connection.
+					DisplayNewConnection(req);
 					//Call the next Middleware registered.
 					next();
 				}
