@@ -2,7 +2,7 @@ const Waf = require('./wafbase');
 
 const DefaultSettings = {
   Rules: [
-    {
+    { //Anti excessive header, remote file inclusion, scan tools and botnets rule.
       Dacls: [
         {
           NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
@@ -115,7 +115,7 @@ const DefaultSettings = {
         }
       ]
     },
-    {
+    { //Anti path traversal and data exposure rule.
       Dacls: [],
       Filters: [
         {
@@ -165,7 +165,7 @@ const DefaultSettings = {
         }
       ]
     },
-    {
+    { //Anti data exposure and XSS US-ASCII based rule.
       Dacls: [],
       Filters: [
         {
@@ -224,7 +224,7 @@ const DefaultSettings = {
         }
       ]
     },
-    {
+    { //Anti XSS and SSI command execution attacks rule.
       Dacls: [],
       Filters: [
         {
@@ -304,7 +304,7 @@ const DefaultSettings = {
         }
       ]
     },
-    {
+    { //Anti mail injection and remote code execution (RCE) rule.
       Dacls: [],
       Filters: [
         {
@@ -390,7 +390,7 @@ const DefaultSettings = {
         }
       ]
     },
-    {
+    { //Anti XSS rule.
       Dacls: [],
       Filters: [
         {
@@ -426,7 +426,7 @@ const DefaultSettings = {
         }
       ]
     },
-    {
+    { //PHP Vuln. CVE-2012-1823 and Unrestricted File Upload rule.
       Dacls: [],
       Filters: [
         {
@@ -464,7 +464,7 @@ const DefaultSettings = {
         }
       ]
     },
-    {
+    { //Anti ASP(X) Unrestricted File Upload rule.
       Dacls: [],
       Filters: [
         {
@@ -483,7 +483,7 @@ const DefaultSettings = {
         }
       ]
     },
-    {
+    { //Anti SQL Injection rule
       Dacls: [],
       Filters: [
         {
@@ -852,7 +852,7 @@ const DefaultSettings = {
         }
       ]
     },
-    {
+    { //Anti Null byte rule
       Dacls: [],
       Filters: [
         {
@@ -883,7 +883,7 @@ const DefaultSettings = {
         }
       ]
     },
-    {
+    { //Anti XSS rule
       Dacls: [],
       Filters: [
         {
@@ -1074,7 +1074,7 @@ const DefaultSettings = {
         },
       ]
     },
-    {
+    { //Anti SQL injection rule.
       Dacls: [
         {
           NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
@@ -1197,18 +1197,18 @@ const DefaultSettings = {
 
           QueryStrings:{
             NameArray:[],
-            RegexArray:[/^(\d*|\w*)\s*(\'|\uff07)?\s*\)*\s*(OR|AND)\s*\w*\=?\w*/igm],
+            RegexArray:[/^(\d*|\w*)\s*(\'|\uff07)?\s*\)*\s*(OR|AND)\s*(\w+(\=|\!\=)+\w+|(SELECT|UNION|DECLARE|BEGIN|INSERT|UPDATE|DELETE|WAITFOR|RLIKE|ORDER\s+BY|\(.+\)))/igm],
             MatchArray:[]
           },
 
           ParamStrings:{
             NameArray:[],
-            RegexArray:[/^(\d*|\w*)\s*(\'|\uff07)?\s*\)*\s*(OR|AND)\s*\w*\=?\w*/igm],
+            RegexArray:[/^(\d*|\w*)\s*(\'|\uff07)?\s*\)*\s*(OR|AND)\s*(\w+(\=|\!\=)+\w+|(SELECT|UNION|DECLARE|BEGIN|INSERT|UPDATE|DELETE|WAITFOR|RLIKE|ORDER\s+BY|\(.+\)))/igm],
             MatchArray:[]
           },
 
           Payloads:{
-            RegexArray:[/^(\d*|\w*)\s*(\'|\uff07)?\s*\)*\s*(OR|AND)\s*\w*\=?\w*/igm],
+            RegexArray:[/^(\d*|\w*)\s*(\'|\uff07)?\s*\)*\s*(OR|AND)\s*(\w+(\=|\!\=)+\w+|(SELECT|UNION|DECLARE|BEGIN|INSERT|UPDATE|DELETE|WAITFOR|RLIKE|ORDER\s+BY|\(.+\)))/igm],
             MatchArray:[]
           },
 
@@ -1266,7 +1266,7 @@ const DefaultSettings = {
         }
       ]
     },
-    {
+    { //Anti Advanced SQL Injection rule.
       Dacls: [],
       Filters: [
         {
@@ -1375,7 +1375,7 @@ const DefaultSettings = {
         }
       ]
     },
-    {
+    { //Anti payload obfuscation and PHP Remote Code Execution (RCE) rule.
       Dacls: [],
       Filters: [
         {
@@ -1442,7 +1442,7 @@ const DefaultSettings = {
         },
       ]
     },
-    {
+    { // DoS rule.
       Dacls: [],
       Filters: [
         {
