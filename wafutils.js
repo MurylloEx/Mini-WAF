@@ -271,6 +271,7 @@ module.exports = {
   AddEntryInAccessTable: AddEntryInAccessTable,
   DisplayBlockedEvent: DisplayBlockedEvent,
   DisplayAuditEvent: DisplayAuditEvent,
+  DisplayNewConnection: DisplayNewConnection,
   WriteEventToLog: WriteEventToLog,
   ApplyArgument: ApplyArgument,
   Hook: Hook
