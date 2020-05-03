@@ -1066,7 +1066,7 @@ function WafMiddleware(wafObj) {
 				}
 				if (!req.Blocked && !res.Blocked){
 					//Display the incoming connection.
-					DisplayNewConnection(req);
+					wafutils.DisplayNewConnection(req);
 					//Call the next Middleware registered.
 					next();
 				}
