@@ -1303,19 +1303,19 @@ const DefaultSettings = {
 
           QueryStrings:{
             NameArray:[],
-            RegexArray:[/^-?(\d*|\w*)\s*(\'|\uff07|\")?\s*(\)){0,3}\s*(AND|OR)\s*/igm],
+            RegexArray:[/^-?(\d+|\w+)\s*(\'|\uff07|\")?\s*(\)){0,3}\s*\b(AND|OR)\s*(SELECT|UNION|DECLARE|BEGIN|INSERT|UPDATE|DELETE|WAITFOR|RLIKE|ORDER\s+BY|\(.+\))/igm],
             MatchArray:[]
           },
 
           ParamStrings:{
             NameArray:[],
-            RegexArray:[/^-?(\d*|\w*)\s*(\'|\uff07|\")?\s*(\)){0,3}\s*(AND|OR)\s*/igm],
+            RegexArray:[/^-?(\d+|\w+)\s*(\'|\uff07|\")?\s*(\)){0,3}\s*\b(AND|OR)\s*(SELECT|UNION|DECLARE|BEGIN|INSERT|UPDATE|DELETE|WAITFOR|RLIKE|ORDER\s+BY|\(.+\))/igm],
             MatchArray:[]
           },
 
           Payloads:{
             NameArray:[],
-            RegexArray:[/^-?(\d*|\w*)\s*(\'|\uff07|\")?\s*(\)){0,3}\s*(AND|OR)\s*/igm],
+            RegexArray:[/^-?(\d+|\w+)\s*(\'|\uff07|\")?\s*(\)){0,3}\s*\b(AND|OR)\s*(SELECT|UNION|DECLARE|BEGIN|INSERT|UPDATE|DELETE|WAITFOR|RLIKE|ORDER\s+BY|\(.+\))/igm],
             MatchArray:[]
           },
 
@@ -1371,7 +1371,7 @@ const DefaultSettings = {
             MatchArray:[]
           },
 
-          Description: 'Advanced SQL injection using very dangerous SQLMap Payloads LEVEL 4.'
+          Description: 'Advanced SQL injection using very dangerous SQLMAP Payloads LEVEL 4.'
         }
       ]
     },
@@ -1453,7 +1453,7 @@ const DefaultSettings = {
 
           Attempts: {
             MaxAttempts: 1024,
-            RenewAttemptsInterval: 32
+            RenewAttemptsInterval: 600
           },
 
           Description: 'Possible Denial of Service attack.'
