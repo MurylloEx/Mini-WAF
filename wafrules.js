@@ -1197,18 +1197,18 @@ const DefaultSettings = {
 
           QueryStrings:{
             NameArray:[],
-            RegexArray:[/^(\d*|\w*)\s*(\'|\uff07)?\s*\)*\s*(OR|AND)\s*(\w+(\=|\!\=)+\w+|(SELECT|UNION|DECLARE|BEGIN|INSERT|UPDATE|DELETE|WAITFOR|RLIKE|ORDER\s+BY|\(.+\)))/igm],
+            RegexArray:[/^(\d*|\w*)\s*(\'|\uff07)?\s*\)*\s*(OR|AND)\s*((SELECT|UNION|DECLARE|BEGIN|INSERT|UPDATE|DELETE|WAITFOR|RLIKE|ORDER\s+BY|\(.+\))|(\'|\uff07)\w+(\'|\uff07)(\=|\!\=)+(\'|\uff07)\w+(\'|\uff07)|-?\d+\s*\=\s*(\(|SELECT|\w+)|\s*\w*\s*IN\s*\()/igm],
             MatchArray:[]
           },
 
           ParamStrings:{
             NameArray:[],
-            RegexArray:[/^(\d*|\w*)\s*(\'|\uff07)?\s*\)*\s*(OR|AND)\s*(\w+(\=|\!\=)+\w+|(SELECT|UNION|DECLARE|BEGIN|INSERT|UPDATE|DELETE|WAITFOR|RLIKE|ORDER\s+BY|\(.+\)))/igm],
+            RegexArray:[/^(\d*|\w*)\s*(\'|\uff07)?\s*\)*\s*(OR|AND)\s*((SELECT|UNION|DECLARE|BEGIN|INSERT|UPDATE|DELETE|WAITFOR|RLIKE|ORDER\s+BY|\(.+\))|(\'|\uff07)\w+(\'|\uff07)(\=|\!\=)+(\'|\uff07)\w+(\'|\uff07)|-?\d+\s*\=\s*(\(|SELECT|\w+)|\s*\w*\s*IN\s*\()/igm],
             MatchArray:[]
           },
 
           Payloads:{
-            RegexArray:[/^(\d*|\w*)\s*(\'|\uff07)?\s*\)*\s*(OR|AND)\s*(\w+(\=|\!\=)+\w+|(SELECT|UNION|DECLARE|BEGIN|INSERT|UPDATE|DELETE|WAITFOR|RLIKE|ORDER\s+BY|\(.+\)))/igm],
+            RegexArray:[/^(\d*|\w*)\s*(\'|\uff07)?\s*\)*\s*(OR|AND)\s*((SELECT|UNION|DECLARE|BEGIN|INSERT|UPDATE|DELETE|WAITFOR|RLIKE|ORDER\s+BY|\(.+\))|(\'|\uff07)\w+(\'|\uff07)(\=|\!\=)+(\'|\uff07)\w+(\'|\uff07)|-?\d+\s*\=\s*(\(|SELECT|\w+)|\s*\w*\s*IN\s*\()/igm],
             MatchArray:[]
           },
 
