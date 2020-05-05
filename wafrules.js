@@ -1372,6 +1372,32 @@ const DefaultSettings = {
           },
 
           Description: 'Advanced SQL injection using very dangerous SQLMAP Payloads LEVEL 4.'
+        },
+        {
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_PAYLOAD | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING,
+          ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
+          Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
+
+          QueryStrings:{
+            NameArray:[],
+            RegexArray:[/^\w+\`\=\`.+\`\s*(AND|OR|\w+|\;)/igm],
+            MatchArray:[]
+          },
+
+          ParamStrings:{
+            NameArray:[],
+            RegexArray:[/^\w+\`\=\`.+\`\s*(AND|OR|\w+|\;)/igm],
+            MatchArray:[]
+          },
+
+          Payloads:{
+            NameArray:[],
+            RegexArray:[/^\w+\`\=\`.+\`\s*(AND|OR|\w+|\;)/igm],
+            MatchArray:[]
+          },
+
+          Description: 'Advanced SQL injection boolean blind based #3.'
         }
       ]
     },
