@@ -163,7 +163,7 @@ function DisplayAuditEvent(event){
 }
 
 function DisplayNewConnection(req){
-  console.log(`[${(new Date()).toLocaleTimeString().cyan}] [${req.protocol.toUpperCase().cyan} ${req.method.cyan}] [${'INFO'.green}] new incoming connection detected from [${req.ip.yellow}] with User Agent [${req.headers["user-agent"]}].`);
+  console.log(`[${(new Date()).toLocaleTimeString().cyan}] [${req.protocol.toUpperCase().cyan} ${req.method.cyan}] [${'INFO'.green}] new incoming connection detected from [${String(req.ip).yellow}] with User Agent [${req.headers["user-agent"]}].`);
 }
 
 function WriteEventToLog(event, logType, fname) {
