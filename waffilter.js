@@ -23,16 +23,15 @@ const SafetyFilter = {
     FilterVariable: function(input, filterType){
         switch(filterType){
             case SafetyFilterType.FILTER_VALIDATE_NUMBER_INT: //Standard of ECMA since 2019.
-                return (Number(input) === input && input % 1 === 0);
+                return (Number(input) == input && input % 1 === 0);
             case SafetyFilterType.FILTER_VALIDATE_NUMBER_FLOAT: //Standard of ECMA since 2019.
-                return (Number(input) === input && input % 1 !== 0);
+                return (Number(input) == input && input % 1 !== 0);
             case SafetyFilterType.FILTER_VALIDATE_STRING: //Mantém apenas 
                 return !new RegExp(/[^a-zA-Z0-9 ]/g).test(input);
             case SafetyFilterType.FILTER_VALIDATE_EMAIL: //https://emailregex.com/ RFC 5322
-                let reg = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
-                return reg.test(input);
+                return (new RegExp(/^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/)).test(input);
             case SafetyFilterType.FILTER_VALIDATE_BOOLEAN: 
-                return (Boolean(input) === input && typeof(input) === typeof(true));
+                return (Boolean(input) == input && typeof(input) === typeof(true));
             default:
                 return input;
         }

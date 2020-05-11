@@ -1,6 +1,6 @@
 {
   "name": "mini-waf",
-  "version": "0.3.91",
+  "version": "0.3.92",
   "description": "Create a safety NodeJS server with Minimalistic Waf library based on deflectjs hook engine.",
   "main": "wafbase.js",
   "scripts": {
