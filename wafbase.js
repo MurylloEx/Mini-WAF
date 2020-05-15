@@ -1072,7 +1072,7 @@ function WafMiddleware(wafObj) {
 		}
 
 		let OnReceiveData = concat(function(rawData){
-			req.rawBody = data.toString('utf8');
+			req.rawBody = rawData.toString('utf8');
 		});
 		let OnCompleteData = function(err){
 			if (typeof req.rawBody == 'undefined'){
