@@ -4,7 +4,7 @@ const concat = require('concat-stream');
 const querystring = require('querystring');
 const colors = require('colors');
 const uuid = require('uuid').v4;
-const CloneStream = require('readable-stream-clone/readable-stream-clone');
+const magicpump = require('magic-pump');
 
 //---------------------------------------------------------------------------
 
@@ -234,8 +234,6 @@ function WafMiddleware(wafObj) {
 								];
 	
 								let Assertions = WafTranslateAssertions(Matchs);
-	
-								Hooks[1].Unhook();
 
 								//Check all matches and pass through or block the request.
 								switch (Dacl.ManageType) {
@@ -290,7 +288,6 @@ function WafMiddleware(wafObj) {
 									//Remover Dacl inválida pois não tem forma de gerenciamento definida.
 								}
 
-								Hooks[1].Hook();
 							}
 
 							let Hooks = [];
@@ -966,8 +963,6 @@ function WafMiddleware(wafObj) {
 								];
 
 								let Assertions = WafTranslateAssertions(Matchs);
-	
-								Hooks[1].Unhook();
 
 								//Check all matches and pass through or block the request.
 								switch(Filter.ManageType){
@@ -1025,16 +1020,14 @@ function WafMiddleware(wafObj) {
 										//Passar a requisição mas adicionar ao log os eventos.
 										break;
 								}
-
-								Hooks[1].Hook();
 							}
 							
 							let SendStub 		= function(){ if(res.Blocked){ return; } ScanOutbound.apply(this, wafutils.ApplyArgument(arguments, 0)); return Hooks[0].OriginalFunction.apply(res, arguments); }
 							let EndStub 		= function(){ if(res.Blocked){ return; } ScanOutbound.apply(this, wafutils.ApplyArgument(arguments, 1)); return Hooks[1].OriginalFunction.apply(res, arguments); }
 							let SetStub 		= function(){ if(res.Blocked){ return; } ScanOutbound.apply(this, wafutils.ApplyArgument(arguments, 2)); return Hooks[2].OriginalFunction.apply(res, arguments); }
-							let HeaderStub 	= function(){ if(res.Blocked){ return; } ScanOutbound.apply(this, wafutils.ApplyArgument(arguments, 3)); return Hooks[3].OriginalFunction.apply(res, arguments); }
+							let HeaderStub 		= function(){ if(res.Blocked){ return; } ScanOutbound.apply(this, wafutils.ApplyArgument(arguments, 3)); return Hooks[3].OriginalFunction.apply(res, arguments); }
 							let JsonStub 		= function(){ if(res.Blocked){ return; } ScanOutbound.apply(this, wafutils.ApplyArgument(arguments, 4)); return Hooks[4].OriginalFunction.apply(res, arguments); }
-							let JsonpStub 	= function(){ if(res.Blocked){ return; } ScanOutbound.apply(this, wafutils.ApplyArgument(arguments, 5)); return Hooks[5].OriginalFunction.apply(res, arguments); }
+							let JsonpStub 		= function(){ if(res.Blocked){ return; } ScanOutbound.apply(this, wafutils.ApplyArgument(arguments, 5)); return Hooks[5].OriginalFunction.apply(res, arguments); }
 							let WriteStub		= function(){ if(res.Blocked){ return; } ScanOutbound.apply(this, wafutils.ApplyArgument(arguments, 6)); return Hooks[6].OriginalFunction.apply(res, arguments); }
 							
 							//I/O hooks in firewall Middleware
@@ -1078,19 +1071,16 @@ function WafMiddleware(wafObj) {
 			
 		}
 
-		let cloned = new CloneStream(req);
-		let reqcloned = new CloneStream(req);
-		cloned.pipe(concat(function(data){
+		let OnReceiveData = concat(function(rawData){
 			req.rawBody = data.toString('utf8');
-			for (let obj in reqcloned){
-				if (typeof req[obj] != "undefined"){
-					 req[obj] = reqcloned[obj];
-				}
-			}
-		})).on('finish', () => {
-			WafEngine();
 		});
-
+		let OnCompleteData = function(err){
+			if (typeof req.rawBody == 'undefined'){
+				req.rawBody = '';
+			}
+			WafEngine();
+		}
+		magicpump(req, OnReceiveData, OnCompleteData);
 	}
 }
 
