@@ -1,6 +1,5 @@
 const Ip = require('ip');
 const wafutils = require('./wafutils');
-const concat = require('concat-stream');
 const querystring = require('querystring');
 const colors = require('colors');
 const uuid = require('uuid').v4;
@@ -1071,15 +1070,16 @@ function WafMiddleware(wafObj) {
 			
 		}
 
-		let OnReceiveData = concat(function(rawData){
+		let OnReceiveData = function(rawData){
 			req.rawBody = rawData.toString('utf8');
-		});
+		}
 		let OnCompleteData = function(err){
 			if (typeof req.rawBody == 'undefined'){
 				req.rawBody = '';
 			}
 			WafEngine();
 		}
+
 		magicpump(req, OnReceiveData, OnCompleteData);
 	}
 }

@@ -1,7 +1,7 @@
 {
   "name": "mini-waf",
-  "version": "0.3.95",
-  "description": "Create a safety NodeJS server with Minimalistic Waf library based on deflectjs hook engine.",
+  "version": "0.3.96",
+  "description": "Create a safety NodeJS server with Minimalistic WAF library based on deflectjs hook engine.",
   "main": "wafbase.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -23,7 +23,6 @@
   "license": "MIT",
   "dependencies": {
     "colors": "^1.4.0",
-    "concat-stream": "^2.0.0",
     "crypto-js": "^4.0.0",
     "ip": "^1.1.5",
     "magic-pump": "0.0.3",
