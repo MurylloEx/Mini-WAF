@@ -52,6 +52,14 @@ const WAF_RULE_DIRECTION = {
  * 
  */
 function WafMiddleware(wafObj) {
+	process.on('uncaughtException', (error) => {
+		const evt = {
+			name: error.name || 'Unknown name',
+			message: error.message || 'Unknown message'
+		};
+		wafutils.DisplayUnhandledExceptionEvent(evt);
+		wafutils.WriteEventToLog(evt, 'EXCEPTION', (new Date().toLocaleDateString()).replace(/[\/\:]/ig, '-') + ' Events.log');
+	});
 	return (req, res, next) => {
 
 		//Define a nova propriedade do WAF nas requisições

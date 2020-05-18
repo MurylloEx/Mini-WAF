@@ -13,6 +13,16 @@ app.get('/', function(req, res){
 
 app.listen(55100);
 
-http.get('http://localhost:55100/', (res)=>{
-    process.exit(0);
+http.get('http://localhost:55100/', (res) => {
+    http.get('http://localhost:55100/?id=1\' OR \'1\'=\'1\'', (res) => {
+        http.get('http://localhost:55100/?page=<script>alert(document.cookie)</script>', (res) => {
+            process.exit(0);
+        });
+    });
 });
+
+//some unhandled exception, should be catch by WAF.
+(()=>{
+    let foo;
+    foo.indexOf('something');
+})();

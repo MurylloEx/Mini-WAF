@@ -9,6 +9,7 @@
 <img src="https://badgen.net/npm/dt/mini-waf"/>
 <img src="https://badgen.net/npm/license/mini-waf"/>
 <img src="https://badgen.net/npm/types/mini-waf"/>
+<img src="https://api.travis-ci.com/MurylloEx/Mini-WAF.svg?branch=master"/>
 <img src="https://badgen.net/badge/author/MurylloEx/red?icon=label"/>
 </p>
 

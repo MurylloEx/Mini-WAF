@@ -162,6 +162,16 @@ function DisplayAuditEvent(event){
   );
 }
 
+function DisplayUnhandledExceptionEvent(event){
+  console.log(
+    `-> Mini-WAF has protected your server now!`.white.bgRed + os.EOL +
+    `   Unhandled exception triggered at ${new Date().toLocaleString()}!`.red + os.EOL +
+    `   Exception name: ${event.name.green}`.yellow + os.EOL +
+    `   Exception message: ${event.message.red}`.yellow + os.EOL +
+    `   Event code: ${('0x' + Number(new Date().getTime() + Math.floor(10 ** 9 * Math.random())).toString(16)).red}\n`.green
+  );
+}
+
 function DisplayNewConnection(req){
   console.log(`[${(new Date()).toLocaleTimeString().cyan}] [${req.protocol.toUpperCase().cyan} ${req.method.cyan}] [${'INFO'.green}] new incoming connection detected from [${String(req.ip).yellow}] with User Agent [${req.headers["user-agent"]}].`);
 }
@@ -189,6 +199,15 @@ function WriteEventToLog(event, logType, fname) {
         ` Port number: ${String(event.request.connection.localPort)}${os.EOL}` +
         ` Traffic direction: ${String((CheckFlags(event.wafComp.Directions, 0x01) && CheckFlags(event.wafComp.Directions, 0x02) ? 'Inbound | Outbound' : (CheckFlags(event.wafComp.Directions, 0x01) ? 'Inbound' : (CheckFlags(event.wafComp.Directions, 0x02) ? 'Outbound' : 'None'))))}${os.EOL}` +
         ` Event code: ${('0x' + Number(new Date().getTime() + Math.floor(10 ** 9 * Math.random())).toString(16))}${os.EOL}${os.EOL}`
+      );
+    }
+    else if (logType.toUpperCase() == 'EXCEPTION') {
+      wfstream.write(
+        `-> Mini-WAF has protected your server now!${os.EOL}` +
+        `   Unhandled exception triggered at ${new Date().toLocaleString()}!${os.EOL}` +
+        `   Exception name: ${event.name}${os.EOL}` +
+        `   Exception message: ${event.message}${os.EOL}` +
+        `   Event code: ${('0x' + Number(new Date().getTime() + Math.floor(10 ** 9 * Math.random())).toString(16))}${os.EOL}${os.EOL}`
       );
     }
     wfstream.end();
@@ -271,6 +290,7 @@ module.exports = {
   AddEntryInAccessTable: AddEntryInAccessTable,
   DisplayBlockedEvent: DisplayBlockedEvent,
   DisplayAuditEvent: DisplayAuditEvent,
+  DisplayUnhandledExceptionEvent: DisplayUnhandledExceptionEvent,
   DisplayNewConnection: DisplayNewConnection,
   WriteEventToLog: WriteEventToLog,
   ApplyArgument: ApplyArgument,
