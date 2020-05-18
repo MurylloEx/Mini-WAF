@@ -4,7 +4,7 @@
   "description": "Create a safety NodeJS server with Minimalistic WAF library based on deflectjs hook engine.",
   "main": "wafbase.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node test.js && echo \"Successfully tested package Mini-WAF!\" && exit 0;"
   },
   "repository": {
     "type": "git",

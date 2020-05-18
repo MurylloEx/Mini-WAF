@@ -1,0 +1,10 @@
+language: node_js
+node_js:
+  - "lts/*"
+cache:
+  npm: false
+before_install:
+  - npm i express --save
+  - npm install
+script:
+  - npm test
