@@ -25,7 +25,7 @@ const SafetyFilter = {
             case SafetyFilterType.FILTER_VALIDATE_NUMBER_INT: //Standard of ECMA since 2019.
                 return (Number(input) == input && input % 1 === 0);
             case SafetyFilterType.FILTER_VALIDATE_NUMBER_FLOAT: //Standard of ECMA since 2019.
-                return (Number(input) == input && input % 1 !== 0);
+                return (Number(input) == input);
             case SafetyFilterType.FILTER_VALIDATE_STRING: //Mantém apenas 
                 return !new RegExp(/[^a-zA-Z0-9 ]/g).test(input);
             case SafetyFilterType.FILTER_VALIDATE_EMAIL: //https://emailregex.com/ RFC 5322
