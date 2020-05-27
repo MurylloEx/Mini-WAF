@@ -50,7 +50,7 @@ const DefaultSettings = {
 
           Headers: {
             NameArray: [],
-            RegexArray: [/^.{300}/igm],
+            RegexArray: [/^.{1024}/igm],
             MatchArray: []
           },
 
