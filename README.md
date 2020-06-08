@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-<img src="https://badgen.net/npm/v/mini-waf"/>
+<img src="https://badgen.net/npm/v/mini-waf"/> 
 <img src="https://badgen.net/npm/dt/mini-waf"/>
 <img src="https://badgen.net/npm/license/mini-waf"/>
 <img src="https://badgen.net/npm/types/mini-waf"/>
