@@ -148,11 +148,11 @@ function WafMiddleware(wafObj) {
 
 							let Hooks = [];
 
-							let SendStub 		= function () { return Hooks[0].OriginalFunction.apply(res, arguments); }
-							let EndStub 		= function () { return Hooks[1].OriginalFunction.apply(res, arguments); }
-							let SetStub 		= function () { return Hooks[2].OriginalFunction.apply(res, arguments); }
+							let SendStub 	= function () { return Hooks[0].OriginalFunction.apply(res, arguments); }
+							let EndStub 	= function () { return Hooks[1].OriginalFunction.apply(res, arguments); }
+							let SetStub 	= function () { return Hooks[2].OriginalFunction.apply(res, arguments); }
 							let HeaderStub 	= function () { return Hooks[3].OriginalFunction.apply(res, arguments); }
-							let JsonStub 		= function () { return Hooks[4].OriginalFunction.apply(res, arguments); }
+							let JsonStub 	= function () { return Hooks[4].OriginalFunction.apply(res, arguments); }
 							let JsonpStub 	= function () { return Hooks[5].OriginalFunction.apply(res, arguments); }
 							let WriteStub 	= function () { return Hooks[6].OriginalFunction.apply(res, arguments); }
 
@@ -302,9 +302,9 @@ function WafMiddleware(wafObj) {
 							let SendStub 		= function(){ if(res.Blocked){ return; } ScanOutbound.apply(this, arguments); return Hooks[0].OriginalFunction.apply(res, arguments); }
 							let EndStub 		= function(){ if(res.Blocked){ return; } ScanOutbound.apply(this, arguments); return Hooks[1].OriginalFunction.apply(res, arguments); }
 							let SetStub 		= function(){ if(res.Blocked){ return; } ScanOutbound.apply(this, arguments); return Hooks[2].OriginalFunction.apply(res, arguments); }
-							let HeaderStub 	= function(){ if(res.Blocked){ return; } ScanOutbound.apply(this, arguments); return Hooks[3].OriginalFunction.apply(res, arguments); }
+							let HeaderStub 		= function(){ if(res.Blocked){ return; } ScanOutbound.apply(this, arguments); return Hooks[3].OriginalFunction.apply(res, arguments); }
 							let JsonStub 		= function(){ if(res.Blocked){ return; } ScanOutbound.apply(this, arguments); return Hooks[4].OriginalFunction.apply(res, arguments); }
-							let JsonpStub 	= function(){ if(res.Blocked){ return; } ScanOutbound.apply(this, arguments); return Hooks[5].OriginalFunction.apply(res, arguments); }
+							let JsonpStub 		= function(){ if(res.Blocked){ return; } ScanOutbound.apply(this, arguments); return Hooks[5].OriginalFunction.apply(res, arguments); }
 							let WriteStub		= function(){ if(res.Blocked){ return; } ScanOutbound.apply(this, arguments); return Hooks[6].OriginalFunction.apply(res, arguments); }
 
 							Hooks.push(wafutils.Hook('send', SendStub, res));

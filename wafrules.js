@@ -5,7 +5,7 @@ const DefaultSettings = {
     { //Anti excessive header, remote file inclusion, scan tools and botnets rule.
       Dacls: [
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_USER_AGENT | Waf.WAF_MATCH_TYPE.MATCH_ALL_SPECIFIED,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -17,7 +17,7 @@ const DefaultSettings = {
           Description: 'Dirb and Dirbuster directory mapping attack.'
         },
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_USER_AGENT | Waf.WAF_MATCH_TYPE.MATCH_ALL_SPECIFIED,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -29,12 +29,12 @@ const DefaultSettings = {
           Description: 'Common dangerous Botnets trying to steal information.'
         },
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_USER_AGENT | Waf.WAF_MATCH_TYPE.MATCH_ALL_SPECIFIED,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
           UserAgents:{
-            RegexArray:[/(?:acunetix|analyzer|AhrefsBot|backdoor|bandit|blackwidow|BOT for JCE|core-project|dts agent|emailmagnet|ex(ploit|tract)|flood|grabber|harvest|httrack|havij|hunter|indy library|inspect|LoadTimeBot|mfibot|Microsoft URL Control|Miami Style|morfeus|nessus|NetLyzer|pmafind|scanner|siphon|spbot|sqlmap|survey|teleport|updown_tester|xovibot)/igm],
+            RegexArray:[/(?:acunetix|analyzer|AhrefsBot|backdoor|bandit|blackwidow|BOT for JCE|core-project|dts agent|emailmagnet|ex(ploit|tract)|flood|grabber|harvest|httrack|havij|hunter|indy library|inspect|LoadTimeBot|mfibot|Microsoft URL Control|Miami Style|morfeus|nessus|NetLyzer|pmafind|scanner|siphon|spbot|sqlmap|survey|teleport|updown_tester|xovibot|masscan)/igm],
             MatchArray:[]
           },
           MethodTypes: "GET|POST|PUT|PATCH|DELETE|OPTIONS|COPY|HEAD|LOCK|UNLOCK|LINK|UNLINK|PURGE",
@@ -43,7 +43,7 @@ const DefaultSettings = {
       ],
       Filters: [
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes:  Waf.WAF_MATCH_TYPE.MATCH_HEADERS,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -57,7 +57,7 @@ const DefaultSettings = {
           Description: 'Excessive header length, possible Header DoS attack.'
         },
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes:  Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -76,7 +76,7 @@ const DefaultSettings = {
           Description: 'Possible Remote File Inclusion attack.'
         },
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes:  Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -95,7 +95,7 @@ const DefaultSettings = {
           Description: 'Possible Remote File Inclusion attack by remote FTP host.'
         },
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes:  Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -119,7 +119,7 @@ const DefaultSettings = {
       Dacls: [],
       Filters: [
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes:  Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -139,7 +139,7 @@ const DefaultSettings = {
           Description: 'Path traversal attack.'
         },
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes:  Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING | Waf.WAF_MATCH_TYPE.MATCH_PAYLOAD,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -169,7 +169,7 @@ const DefaultSettings = {
       Dacls: [],
       Filters: [
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -192,7 +192,7 @@ const DefaultSettings = {
           //https://github.com/SpiderLabs/owasp-modsecurity-crs/issues/1645
           //https://owasp.org/www-community/xss-filter-evasion-cheatsheet
 
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING | Waf.WAF_MATCH_TYPE.MATCH_PAYLOAD | Waf.WAF_MATCH_TYPE.MATCH_HEADERS,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -228,7 +228,7 @@ const DefaultSettings = {
       Dacls: [],
       Filters: [
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING | Waf.WAF_MATCH_TYPE.MATCH_PAYLOAD,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -253,7 +253,7 @@ const DefaultSettings = {
           Description: 'XSS attack by invoke prefix method in request.'
         },
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING | Waf.WAF_MATCH_TYPE.MATCH_PAYLOAD,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -278,7 +278,7 @@ const DefaultSettings = {
           Description: 'XSS attack by eval or local function call.'
         },
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING | Waf.WAF_MATCH_TYPE.MATCH_PAYLOAD,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -308,7 +308,7 @@ const DefaultSettings = {
       Dacls: [],
       Filters: [
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING | Waf.WAF_MATCH_TYPE.MATCH_PAYLOAD,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -333,7 +333,7 @@ const DefaultSettings = {
           Description: 'Mail header injection attack.'
         },
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING | Waf.WAF_MATCH_TYPE.MATCH_PAYLOAD,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -358,7 +358,7 @@ const DefaultSettings = {
           Description: 'Remote shellcode execution attack.'
         },
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING | Waf.WAF_MATCH_TYPE.MATCH_PAYLOAD | Waf.WAF_MATCH_TYPE.MATCH_COOKIES,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -394,7 +394,7 @@ const DefaultSettings = {
       Dacls: [],
       Filters: [
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING | Waf.WAF_MATCH_TYPE.MATCH_PAYLOAD | Waf.WAF_MATCH_TYPE.MATCH_HEADERS,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -430,7 +430,7 @@ const DefaultSettings = {
       Dacls: [],
       Filters: [
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_PAYLOAD | Waf.WAF_MATCH_TYPE.MATCH_HEADERS,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -449,7 +449,7 @@ const DefaultSettings = {
           Description: 'PHP Vulnerability CVE-2012-1823.'
         },
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_FILE_EXT,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -468,7 +468,7 @@ const DefaultSettings = {
       Dacls: [],
       Filters: [
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_FILE_EXT,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -487,7 +487,7 @@ const DefaultSettings = {
       Dacls: [],
       Filters: [
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_HEADERS | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -513,7 +513,7 @@ const DefaultSettings = {
           Description: 'SQL Injection Time-Based.'
         },
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_HEADERS | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -539,7 +539,7 @@ const DefaultSettings = {
           Description: 'SQL Injection using unescaped single-quote.'
         },
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_HEADERS | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -565,7 +565,7 @@ const DefaultSettings = {
           Description: 'Blind SQL Injection'
         },
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_HEADERS | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -591,7 +591,7 @@ const DefaultSettings = {
           Description: 'Tautology assertion SQL Injection.'
         },
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_HEADERS | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -617,7 +617,7 @@ const DefaultSettings = {
           Description: 'SQL Injection by Insert method.'
         },
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_HEADERS | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -643,7 +643,7 @@ const DefaultSettings = {
           Description: 'Admin comment based SQL Injection.'
         },
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_HEADERS | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -669,7 +669,7 @@ const DefaultSettings = {
           Description: 'SQL Injection by UNION method.'
         },
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_HEADERS | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -695,7 +695,7 @@ const DefaultSettings = {
           Description: 'SQL Injection by common functions. #1'
         },
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_HEADERS | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -721,7 +721,7 @@ const DefaultSettings = {
           Description: 'Suspicious NULL assertion injection in SQL Injection attack.'
         },
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_HEADERS | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -747,7 +747,7 @@ const DefaultSettings = {
           Description: 'Suspicious NULL assertion based SQL injection.'
         },
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_HEADERS | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -773,7 +773,7 @@ const DefaultSettings = {
           Description: 'Negative number based SQL Injection.'
         },
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_HEADERS | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -799,7 +799,7 @@ const DefaultSettings = {
           Description: 'Order by column based SQL Injection.'
         },
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_HEADERS | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -825,7 +825,7 @@ const DefaultSettings = {
           Description: 'Union, intersect or except based method to SQL Injection.'
         },
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_HEADERS | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -856,7 +856,7 @@ const DefaultSettings = {
       Dacls: [],
       Filters: [
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_HEADERS | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -887,7 +887,7 @@ const DefaultSettings = {
       Dacls: [],
       Filters: [
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_HEADERS | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING | Waf.WAF_MATCH_TYPE.MATCH_PAYLOAD,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -918,7 +918,7 @@ const DefaultSettings = {
           Description: 'XSS attack by function, class or array injection.'
         },
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_HEADERS | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING | Waf.WAF_MATCH_TYPE.MATCH_PAYLOAD,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -949,7 +949,7 @@ const DefaultSettings = {
           Description: 'XSS DOM based injection.'
         },
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_HEADERS | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING | Waf.WAF_MATCH_TYPE.MATCH_PAYLOAD,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -980,7 +980,7 @@ const DefaultSettings = {
           Description: 'XSS DOM based by HTML event attributes.'
         },
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_HEADERS | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING | Waf.WAF_MATCH_TYPE.MATCH_PAYLOAD,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -1011,7 +1011,7 @@ const DefaultSettings = {
           Description: 'XSS DOM based injection.'
         },
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_HEADERS | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING | Waf.WAF_MATCH_TYPE.MATCH_PAYLOAD,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -1042,7 +1042,7 @@ const DefaultSettings = {
           Description: 'XSS DOM poisoning based by common attributes.'
         },
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_HEADERS | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING | Waf.WAF_MATCH_TYPE.MATCH_PAYLOAD,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -1077,7 +1077,7 @@ const DefaultSettings = {
     { //Anti SQL injection rule.
       Dacls: [
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_USER_AGENT,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -1090,7 +1090,7 @@ const DefaultSettings = {
       ],
       Filters: [
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_PAYLOAD | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -1115,7 +1115,7 @@ const DefaultSettings = {
           Description: 'SQL Injection single quote UTF-16 beginning string.'
         },
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_PAYLOAD | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -1140,7 +1140,7 @@ const DefaultSettings = {
           Description: 'SQL Injection boolean blind based #1.'
         },
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_PAYLOAD | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -1165,7 +1165,7 @@ const DefaultSettings = {
           Description: 'SQL Injection "UNION" or "ORDER BY" based #1.'
         },
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_PAYLOAD | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -1190,7 +1190,7 @@ const DefaultSettings = {
           Description: 'SQL Injection "UNION" or "ORDER BY" based #2.'
         },
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_PAYLOAD | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -1215,7 +1215,7 @@ const DefaultSettings = {
           Description: 'SQL Injection boolean blind based #2.'
         },
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_PAYLOAD | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -1240,7 +1240,7 @@ const DefaultSettings = {
           Description: 'SQL Injection using "RLIKE" or "WAITFOR" command.'
         },
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_PAYLOAD | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -1270,7 +1270,7 @@ const DefaultSettings = {
       Dacls: [],
       Filters: [
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_PAYLOAD | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -1296,7 +1296,7 @@ const DefaultSettings = {
           Description: 'Advanced SQL injection using "ORDER BY" or "UNION" operators.'
         },
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_PAYLOAD | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -1322,7 +1322,7 @@ const DefaultSettings = {
           Description: 'Advanced SQL injection boolean blind based.'
         },
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_PAYLOAD | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -1348,7 +1348,7 @@ const DefaultSettings = {
           Description: 'Advanced SQL injection using "SELECT", "DECLARE", "WAITFOR" or "CREATE" methods.'
         },
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_PAYLOAD | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -1374,7 +1374,7 @@ const DefaultSettings = {
           Description: 'Advanced SQL injection using very dangerous SQLMAP Payloads LEVEL 4.'
         },
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_PAYLOAD | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -1405,7 +1405,7 @@ const DefaultSettings = {
       Dacls: [],
       Filters: [
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_HEADERS | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING | Waf.WAF_MATCH_TYPE.MATCH_PAYLOAD,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -1436,7 +1436,7 @@ const DefaultSettings = {
           Description: 'Possible UTF-8/16 encoded and obfuscated payload injection.'
         },
         {
-          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4,
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
           MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_HEADERS | Waf.WAF_MATCH_TYPE.MATCH_PARAM_STRING | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING | Waf.WAF_MATCH_TYPE.MATCH_PAYLOAD,
           ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
           Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
@@ -1465,7 +1465,51 @@ const DefaultSettings = {
           },
 
           Description: 'Remote code execution (RCE) attack attempt.'
+        }
+      ]
+    },
+    { //Anti prototype pollution rule.
+      Dacls: [],
+      Filters: [
+        {
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
+          MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_HEADERS | Waf.WAF_MATCH_TYPE.MATCH_PAYLOAD | Waf.WAF_MATCH_TYPE.MATCH_ALL_SPECIFIED,
+          ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
+          Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
+
+          Headers:{
+            NameArray:[],
+            RegexArray:[/^application\/json/igm],
+            MatchArray:[]
+          },
+
+          Payloads:{
+            RegexArray:[/(?:(?:{|%7B|%u007B|\[|%5B|%u005B)(?:.|\s)*(?:"|%22|%u0022)(?:__proto__|toString|toLocaleString|isPrototypeOf|hasOwnProperty|propertyIsEnumerable|valueOf|__defineGetter__|__defineSetter__|__lookupGetter__|constructor)(?:"|%22|%u0022)(?:.|\s)*(?:}|%7D|%u007D|\]|%5D|%u005D))/igm],
+            MatchArray:[]
+          },
+
+          Description: 'Possible Prototype Pollution and Remote Code Execution #1.'
         },
+        {
+          NetworkLayers: Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV4 | Waf.WAF_NETWORK_LAYER.PROTOCOL_IPV6,
+          MatchTypes: Waf.WAF_MATCH_TYPE.MATCH_COOKIES | Waf.WAF_MATCH_TYPE.MATCH_QUERY_STRING,
+          ManageType: Waf.WAF_MANAGE_TYPE.BLOCK,
+          Directions: Waf.WAF_RULE_DIRECTION.INBOUND,
+
+          Cookies:{
+            NameArray:[],
+            RegexArray:[/(?:(?:{|%7B|%u007B|\[|%5B|%u005B)(?:.|\s)*(?:"|%22|%u0022)(?:__proto__|toString|toLocaleString|isPrototypeOf|hasOwnProperty|propertyIsEnumerable|valueOf|__defineGetter__|__defineSetter__|__lookupGetter__|constructor)(?:"|%22|%u0022)(?:.|\s)*(?:}|%7D|%u007D|\]|%5D|%u005D))/igm],
+            MatchArray:[]
+          },
+
+          QueryStrings:{
+            NameArray:[],
+            RegexArray:[/(?:(?:{|%7B|%u007B|\[|%5B|%u005B)(?:.|\s)*(?:"|%22|%u0022)(?:__proto__|toString|toLocaleString|isPrototypeOf|hasOwnProperty|propertyIsEnumerable|valueOf|__defineGetter__|__defineSetter__|__lookupGetter__|constructor)(?:"|%22|%u0022)(?:.|\s)*(?:}|%7D|%u007D|\]|%5D|%u005D))/igm],
+            MatchArray:[]
+          },
+
+          Description: 'Possible Prototype Pollution and Remote Code Execution #2.'
+        }
       ]
     },
     { // DoS rule.
