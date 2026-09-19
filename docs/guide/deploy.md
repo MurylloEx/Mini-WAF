@@ -22,9 +22,9 @@ Assets must live under the `/Mini-WAF/` base path:
 DOCS_BASE=/Mini-WAF/ npm run docs:build
 ```
 
-CI does this automatically. The workflow [`.github/workflows/docs.yml`](../../.github/workflows/docs.yml) builds with `DOCS_BASE=/Mini-WAF/` and deploys via `actions/upload-pages-artifact` + `actions/deploy-pages`.
+CI does this automatically. The workflow [`.github/workflows/docs.yml`](../../.github/workflows/docs.yml) builds with `DOCS_BASE=/Mini-WAF/` and publishes to the `gh-pages` branch (`peaceiris/actions-gh-pages`).
 
-In the repo **Settings → Pages**, set the source to **GitHub Actions**.
+In the repo **Settings → Pages**, set **Source** to **Deploy from a branch**, branch **`gh-pages`** / **`/`** (root). After the first successful workflow run (or an initial `gh-pages` push), the site goes live.
 
 Site URL: `https://murylloex.github.io/Mini-WAF/`
 
