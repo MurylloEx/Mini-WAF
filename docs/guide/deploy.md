@@ -2,7 +2,7 @@
 
 This documentation is a **VitePress** static site under `docs/`. Build output goes to `docs/.vitepress/dist`.
 
-The product site target is **`https://mini-waf.github.io`**.
+The live site for this personal repository is **[https://murylloex.github.io/Mini-WAF/](https://murylloex.github.io/Mini-WAF/)** (GitHub **Project Pages** on [MurylloEx/Mini-WAF](https://github.com/MurylloEx/Mini-WAF)).
 
 ## Local commands
 
@@ -14,48 +14,31 @@ npm run docs:build    # writes docs/.vitepress/dist
 npm run docs:preview  # serve the production build locally
 ```
 
-## Option A — `mini-waf.github.io` (recommended for the custom domain / org site)
+## Primary path — Project Pages on this repo
 
-Use a dedicated GitHub repository named **`mini-waf.github.io`** (user or organization `mini-waf`).
-
-1. Keep `base: '/'` (default). Do **not** set `DOCS_BASE`.
-2. Build:
-
-   ```bash
-   npm run docs:build
-   ```
-
-3. Publish the contents of `docs/.vitepress/dist` to the `main` (or `gh-pages`) branch of the `mini-waf.github.io` repo — for example:
-
-   ```bash
-   # example: push dist into a sibling clone of mini-waf.github.io
-   rsync -a --delete docs/.vitepress/dist/ ../mini-waf.github.io/
-   cd ../mini-waf.github.io && git add -A && git commit -m "docs: publish" && git push
-   ```
-
-4. In the repo **Settings → Pages**, serve from the branch root.
-
-Site URL: `https://mini-waf.github.io/`
-
-## Option B — Project Pages on the library repo
-
-If you publish from [MurylloEx/Mini-WAF](https://github.com/MurylloEx/Mini-WAF) as GitHub **project** pages, assets must live under `/Mini-WAF/`:
+Assets must live under the `/Mini-WAF/` base path:
 
 ```bash
 DOCS_BASE=/Mini-WAF/ npm run docs:build
 ```
 
-Then deploy `docs/.vitepress/dist` via GitHub Actions (`peaceiris/actions-gh-pages`, `actions/upload-pages-artifact`, etc.) or the Pages UI.
+CI does this automatically. The workflow [`.github/workflows/docs.yml`](../../.github/workflows/docs.yml) builds with `DOCS_BASE=/Mini-WAF/` and deploys via `actions/upload-pages-artifact` + `actions/deploy-pages`.
 
-Site URL: `https://murylloex.github.io/Mini-WAF/` (adjust user/org).
+In the repo **Settings → Pages**, set the source to **GitHub Actions**.
 
-You can still attach a custom domain later; for a naked `mini-waf.github.io` host, **Option A** is the usual fit.
+Site URL: `https://murylloex.github.io/Mini-WAF/`
 
-## Example GitHub Actions (Option A artifact → Pages)
+## Optional — dedicated user/org site (`*.github.io`)
 
-If `mini-waf.github.io` is a separate repo that only hosts the static files, a simple push workflow is enough. If you build from this library repo and deploy to Pages in the same repo with `base: '/'`, ensure Pages is not expecting a project subpath.
+A bare host like `https://mini-waf.github.io` needs a GitHub user or organization named `mini-waf` and a repo named `mini-waf.github.io`. That is a separate setup, not the default for this personal repo.
 
-Minimal build job fragment:
+1. Keep `base: '/'` (default). Do **not** set `DOCS_BASE`.
+2. Build with `npm run docs:build`.
+3. Publish `docs/.vitepress/dist` to that dedicated Pages repo (or another host).
+
+## Example GitHub Actions (this repo)
+
+The maintained workflow already covers build + deploy. Minimal build fragment:
 
 ```yaml
 jobs:
@@ -68,8 +51,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run docs:build
-      # upload docs/.vitepress/dist to your Pages deploy action
+      - run: DOCS_BASE=/Mini-WAF/ npm run docs:build
+      # then upload docs/.vitepress/dist via actions/upload-pages-artifact
 ```
 
 ## Logo & branding

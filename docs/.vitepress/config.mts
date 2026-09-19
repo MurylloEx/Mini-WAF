@@ -2,8 +2,8 @@ import { defineConfig } from 'vitepress';
 
 /**
  * GitHub Pages:
- * - Org/user site `https://mini-waf.github.io` → base: '/'
- * - Project pages on the library repo (`https://<user>.github.io/Mini-WAF/`) → base: '/Mini-WAF/'
+ * - Project pages (default for this personal repo): `https://murylloex.github.io/Mini-WAF/` → base: '/Mini-WAF/'
+ * - User/org site on a dedicated `*.github.io` repo → base: '/'
  *
  * Override at build time: `DOCS_BASE=/Mini-WAF/ npm run docs:build`
  */

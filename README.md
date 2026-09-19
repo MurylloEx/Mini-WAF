@@ -17,7 +17,7 @@ Minimal Web Application Firewall for Node.js (**v3**). Plug it in as middleware/
 
 Supports **Express**, **Fastify**, and **NestJS** (optional peers — install only the framework you use).
 
-**Documentation:** [https://mini-waf.github.io](https://mini-waf.github.io) (source in [`docs/`](./docs/); run locally with `npm run docs:dev`)
+**Documentation:** [https://murylloex.github.io/Mini-WAF/](https://murylloex.github.io/Mini-WAF/) (source in [`docs/`](./docs/); run locally with `npm run docs:dev`)
 
 ## Install
 
