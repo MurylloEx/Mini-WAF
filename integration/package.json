@@ -1,0 +1,14 @@
+{
+  "name": "mini-waf-integration",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "postinstall": "npm install --prefix express && npm install --prefix fastify && npm install --prefix nestjs-express && npm install --prefix koa",
+    "integration": "node scenarios/run.mjs",
+    "integration:no-start": "node scenarios/run.mjs --no-start"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "mini-waf": "file:.."
+  }
+}

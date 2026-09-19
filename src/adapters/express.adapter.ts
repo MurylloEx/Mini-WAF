@@ -8,7 +8,11 @@ import type {
   QueryMap,
   UploadedFile,
 } from '@/domain/values';
-import { bodyToString, normalizeFiles, scalarToString } from '@/domain/values';
+import {
+  lazyBodyToString,
+  normalizeFiles,
+  scalarToString,
+} from '@/domain/values';
 import { parseCookies } from '@/utils/cookies';
 import { normalizeClientIp, pickClientIpFromXff } from '@/utils/ip';
 
@@ -86,7 +90,9 @@ export function createExpressAdapter(): WafAdapter<
     createContext(req, res): WafHttpContext {
       let blocked = false;
       const ip = resolveIp(req);
-      const rawBody = bodyToString(req.rawBody ?? req.body);
+      // Deferred: only pays JSON.stringify (parsed body) / Buffer decode
+      // cost the first time a rule actually inspects the `body` field.
+      const getRawBody = lazyBodyToString(() => req.rawBody ?? req.body);
       const url = req.originalUrl || req.url || '/';
       const path = url.match(/^[^?]*/)?.[0] || '/';
 
@@ -113,7 +119,7 @@ export function createExpressAdapter(): WafAdapter<
         getHeaders: () => headerMapFromIncoming(req.headers),
         getQuery: () => req.query ?? {},
         getCookies: () => parseCookies(getHeader('cookie')),
-        getRawBody: () => rawBody,
+        getRawBody,
         getFiles: () => files,
         setResponseHeader: (name, value) => {
           if (typeof res.set === 'function') {

@@ -41,14 +41,6 @@ function patternMatchesField(
   fields: FieldResolveOptions,
 ): boolean {
   const values = resolveFieldValues(ctx, condition.field, fields);
-  const hasPattern =
-    condition.matches !== undefined ||
-    condition.equals !== undefined ||
-    condition.includes !== undefined;
-
-  if (!hasPattern) {
-    return false;
-  }
 
   // Prefer pre-lowercased needles (normalizeRules); still lower once here for
   // callers that pass raw conditions into evaluateCondition.

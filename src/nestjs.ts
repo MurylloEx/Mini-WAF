@@ -24,14 +24,31 @@ function resolveConfig(options: NestMiniWafOptions): WafConfig {
 
 /**
  * NestJS middleware class (works with Express or Fastify platforms).
+ *
+ * Nest resolves middleware classes via `new MiniWafMiddleware(...)` and cannot
+ * inject options without `@Inject` from `@nestjs/common`. `MiniWafModule.forRoot`
+ * therefore binds options onto the class before Nest instantiates the middleware.
  */
 export class MiniWafMiddleware {
+  private static boundOptions: NestMiniWafOptions | undefined;
+
+  /** Used by {@link MiniWafModule.forRoot}. */
+  static bindOptions(options: NestMiniWafOptions): void {
+    MiniWafMiddleware.boundOptions = options;
+  }
+
   private readonly waf;
   private readonly adapter;
 
-  constructor(options: NestMiniWafOptions) {
-    this.waf = createMiniWaf(resolveConfig(options), options);
-    this.adapter = createNestAdapter(options.platform ?? 'auto');
+  constructor(options?: NestMiniWafOptions) {
+    const resolved = options ?? MiniWafMiddleware.boundOptions;
+    if (resolved === undefined) {
+      throw new Error(
+        'MiniWafMiddleware requires options: use MiniWafModule.forRoot({ config }) before consumer.apply(MiniWafMiddleware), or pass options to the constructor / nestMiddleware().',
+      );
+    }
+    this.waf = createMiniWaf(resolveConfig(resolved), resolved);
+    this.adapter = createNestAdapter(resolved.platform ?? 'auto');
   }
 
   use(req: NestRequest, res: NestResponse, next: ExpressNext): void {
@@ -45,29 +62,32 @@ export class MiniWafMiddleware {
   }
 }
 
+/**
+ * Nest-compatible DynamicModule shape (no `@nestjs/common` import).
+ * Arrays are mutable so they assign to Nest's `Provider[]` / `exports`.
+ */
 export interface MiniWafDynamicModule {
-  readonly module: typeof MiniWafModule;
-  readonly providers: readonly [
-    { readonly provide: typeof MINI_WAF_OPTIONS; readonly useValue: NestMiniWafOptions },
-    {
-      readonly provide: typeof MiniWafMiddleware;
-      readonly useFactory: (opts: NestMiniWafOptions) => MiniWafMiddleware;
-      readonly inject: readonly [typeof MINI_WAF_OPTIONS];
-    },
-  ];
-  readonly exports: readonly [
-    typeof MiniWafMiddleware,
-    typeof MINI_WAF_OPTIONS,
-  ];
-  readonly global: true;
+  module: typeof MiniWafModule;
+  providers: Array<
+    | { provide: typeof MINI_WAF_OPTIONS; useValue: NestMiniWafOptions }
+    | {
+        provide: typeof MiniWafMiddleware;
+        useFactory: (opts: NestMiniWafOptions) => MiniWafMiddleware;
+        inject: [typeof MINI_WAF_OPTIONS];
+      }
+  >;
+  exports: Array<typeof MiniWafMiddleware | typeof MINI_WAF_OPTIONS>;
+  global: true;
 }
 
 /**
- * Lightweight Nest-style dynamic module descriptor.
- * Does not import `@nestjs/common` so the peer stays optional at compile time.
+ * Nest-compatible dynamic module (plain class — no `@nestjs/common` import).
+ * Nest requires `DynamicModule.module` to be a constructor; a plain object
+ * causes `TypeError: metatype is not a constructor` at bootstrap.
  */
-export const MiniWafModule = {
-  forRoot(options: NestMiniWafOptions): MiniWafDynamicModule {
+export class MiniWafModule {
+  static forRoot(options: NestMiniWafOptions): MiniWafDynamicModule {
+    MiniWafMiddleware.bindOptions(options);
     return {
       module: MiniWafModule,
       global: true,
@@ -82,8 +102,8 @@ export const MiniWafModule = {
       ],
       exports: [MiniWafMiddleware, MINI_WAF_OPTIONS],
     };
-  },
-};
+  }
+}
 
 /** Functional Nest middleware factory. */
 export function nestMiddleware(

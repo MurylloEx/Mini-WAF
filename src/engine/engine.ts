@@ -41,6 +41,7 @@ import { requestFingerprint } from '@/engine/fingerprint';
 import { normalizeRules } from '@/engine/normalize-condition';
 import type { WafField } from '@/domain/rules';
 import { LruCache } from '@/utils/lru';
+import { performance } from 'node:perf_hooks';
 
 export interface WafEngineOptions {
   /** Inject a shared rate-limit store (tests / multi-instance). */
@@ -261,10 +262,13 @@ function advanceOneRule(
     options.evaluate,
   );
 
-  const withRate = {
-    ...state,
-    lastRateLimitInfo: evaluation.rateLimitInfo ?? state.lastRateLimitInfo,
-  };
+  // Most rules on the hot (clean/allow) path have no `rateLimit` spec, so
+  // `evaluation.rateLimitInfo` is `undefined` and `lastRateLimitInfo` would
+  // stay byte-for-byte the same — skip the allocation/spread entirely then.
+  const withRate =
+    evaluation.rateLimitInfo !== undefined
+      ? { ...state, lastRateLimitInfo: evaluation.rateLimitInfo }
+      : state;
 
   if (!evaluation.matched) {
     return withRate;
@@ -277,6 +281,22 @@ function yieldToEventLoop(): Promise<void> {
   return new Promise((resolve) => {
     setImmediate(resolve);
   });
+}
+
+/**
+ * Synchronous time budget (ms) allowed between two `setImmediate` yields.
+ * `ruleYieldEvery` still bounds the *rule-count* granularity at which we are
+ * willing to check the clock / yield (chunk size), but the actual yield only
+ * happens once accumulated synchronous work crosses this budget — not on
+ * every chunk boundary. This keeps small/medium packs (well under the
+ * budget) on the fully synchronous, allocation-free path while still
+ * protecting the event loop once real work (huge bodies, many rules, custom
+ * heavy regex) adds up.
+ */
+const DEFAULT_YIELD_BUDGET_MS = 1;
+
+function nowMs(): number {
+  return performance.now();
 }
 
 function scanRulesFrom(
@@ -329,6 +349,10 @@ async function scanRulesChunkedAsync(
   state: ScanState,
   options: ScanOptions,
   yieldEvery: number,
+  // Wall-clock start of the current "since last yield" window — used to
+  // decide whether accumulated synchronous work justifies paying the
+  // `setImmediate` round-trip, instead of yielding on every fixed-size chunk.
+  sinceYieldStartMs: number,
 ): Promise<ScanState> {
   if (index >= rules.length || state.allowRule !== undefined) {
     return state;
@@ -340,6 +364,21 @@ async function scanRulesChunkedAsync(
     return next;
   }
 
+  const elapsedSinceYieldMs = nowMs() - sinceYieldStartMs;
+  if (elapsedSinceYieldMs < DEFAULT_YIELD_BUDGET_MS) {
+    // Still cheap: keep scanning the next chunk synchronously — no
+    // setImmediate cost paid unless/until real work accumulates.
+    return scanRulesChunkedAsync(
+      ctx,
+      rules,
+      endExclusive,
+      next,
+      options,
+      yieldEvery,
+      sinceYieldStartMs,
+    );
+  }
+
   await yieldToEventLoop();
   return scanRulesChunkedAsync(
     ctx,
@@ -348,6 +387,7 @@ async function scanRulesChunkedAsync(
     next,
     options,
     yieldEvery,
+    nowMs(),
   );
 }
 
@@ -367,8 +407,18 @@ async function scanRulesFromAsync(
     return scanRulesFrom(ctx, rules, 0, state, options);
   }
 
-  // Large packs: sync chunks of `yieldEvery` rules, then setImmediate.
-  return scanRulesChunkedAsync(ctx, rules, 0, state, options, yieldEvery);
+  // Large packs: sync chunks of `yieldEvery` rules; only yield once
+  // accumulated synchronous time crosses the budget (see
+  // `DEFAULT_YIELD_BUDGET_MS`), not on every chunk boundary.
+  return scanRulesChunkedAsync(
+    ctx,
+    rules,
+    0,
+    state,
+    options,
+    yieldEvery,
+    nowMs(),
+  );
 }
 
 function defaultScanOptions(

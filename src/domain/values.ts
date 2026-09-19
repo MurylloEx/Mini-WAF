@@ -77,6 +77,27 @@ export function bodyToString(
   return jsonToString(value);
 }
 
+/**
+ * Defer `bodyToString` (which can `JSON.stringify` a large parsed body) until
+ * the WAF actually reads the body — i.e. only when some active rule's field
+ * resolution needs it. Adapters call `getRaw()` synchronously (already
+ * parsed by the framework), so laziness is safe and result is cached after
+ * the first call: {@link WafHttpContext.getRawBody} is memoized per request
+ * upstream (field-resolver memo) but adapters are also used directly, so
+ * this keeps the guarantee "computed at most once" self-contained here too.
+ */
+export function lazyBodyToString(
+  getRaw: () => string | Buffer | JsonValue | undefined,
+): () => string {
+  let cached: string | undefined;
+  return () => {
+    if (cached === undefined) {
+      cached = bodyToString(getRaw());
+    }
+    return cached;
+  };
+}
+
 function isFileList(
   files: FilesBag,
 ): files is readonly UploadedFile[] {

@@ -1,0 +1,128 @@
+{
+  "meta": {
+    "kind": "http",
+    "mode": "fixed-request-count",
+    "requests": 50000,
+    "warmup": 2000,
+    "concurrency": 32,
+    "keepAlive": true,
+    "node": "v24.15.0",
+    "cpu": "16× AMD Ryzen 7 5700X3D 8-Core Processor",
+    "timestamp": "2026-09-19T18:38:49.053Z",
+    "waf": {
+      "presets": [
+        "default"
+      ],
+      "level": "balanced",
+      "disabledRuleIds": [
+        "preset-dos-rate-limit"
+      ],
+      "ruleYieldEvery": 0,
+      "rationale": "Disable dos rate-limit so allow-path benches are not rate-limited / cache-disabled"
+    }
+  },
+  "cases": [
+    {
+      "id": "B0",
+      "name": "Express NO WAF  GET /health",
+      "requests": 50000,
+      "completed": 50000,
+      "errors": 0,
+      "errorRate": 0,
+      "wallMs": 7119.05,
+      "opsPerSec": 7023,
+      "p50Us": 4382.6,
+      "p95Us": 5322.93,
+      "p99Us": 5800.61,
+      "statusCodes": {
+        "200": 50000
+      },
+      "concurrency": 32
+    },
+    {
+      "id": "B1",
+      "name": "Express + WAF   GET /health",
+      "requests": 50000,
+      "completed": 50000,
+      "errors": 0,
+      "errorRate": 0,
+      "wallMs": 8696.14,
+      "opsPerSec": 5750,
+      "p50Us": 5436.95,
+      "p95Us": 6051.52,
+      "p99Us": 6945.31,
+      "statusCodes": {
+        "200": 50000
+      },
+      "concurrency": 32
+    },
+    {
+      "id": "C0",
+      "name": "Express NO WAF  GET /search clean",
+      "requests": 50000,
+      "completed": 50000,
+      "errors": 0,
+      "errorRate": 0,
+      "wallMs": 7405.37,
+      "opsPerSec": 6752,
+      "p50Us": 4688.99,
+      "p95Us": 4997.51,
+      "p99Us": 5424.55,
+      "statusCodes": {
+        "200": 50000
+      },
+      "concurrency": 32
+    },
+    {
+      "id": "C1",
+      "name": "Express + WAF   GET /search clean",
+      "requests": 50000,
+      "completed": 50000,
+      "errors": 0,
+      "errorRate": 0,
+      "wallMs": 9040.37,
+      "opsPerSec": 5531,
+      "p50Us": 5752.44,
+      "p95Us": 6160.01,
+      "p99Us": 6537.43,
+      "statusCodes": {
+        "200": 50000
+      },
+      "concurrency": 32
+    },
+    {
+      "id": "C2",
+      "name": "Express NO WAF  GET /search SQLi (expect 200)",
+      "requests": 50000,
+      "completed": 50000,
+      "errors": 0,
+      "errorRate": 0,
+      "wallMs": 7571.56,
+      "opsPerSec": 6604,
+      "p50Us": 4759.42,
+      "p95Us": 5329.63,
+      "p99Us": 5726.53,
+      "statusCodes": {
+        "200": 50000
+      },
+      "concurrency": 32
+    },
+    {
+      "id": "C3",
+      "name": "Express + WAF   GET /search SQLi (expect 403)",
+      "requests": 50000,
+      "completed": 50000,
+      "errors": 0,
+      "errorRate": 0,
+      "wallMs": 7038.7,
+      "opsPerSec": 7104,
+      "p50Us": 4464.46,
+      "p95Us": 4838.92,
+      "p99Us": 5298.36,
+      "statusCodes": {
+        "403": 50000
+      },
+      "concurrency": 32
+    }
+  ]
+}

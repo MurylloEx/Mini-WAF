@@ -41,7 +41,11 @@
     "lint": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.tests.json --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "prepare": "npm run build"
+    "prepare": "npm run build",
+    "bench": "npm run build && node benchmarks/run.mjs",
+    "bench:http": "npm run build && node benchmarks/http.mjs",
+    "bench:compare": "npm run build && node benchmarks/compare.mjs",
+    "integration": "npm run build && npm install --prefix integration && npm run integration --prefix integration"
   },
   "repository": {
     "type": "git",

@@ -2,12 +2,17 @@ import type { WafHttpContext } from '@/domain/context';
 import type { HeaderMap, QueryMap } from '@/domain/values';
 import { scalarToString } from '@/domain/values';
 
-/** Stable djb2 hash → unsigned hex (no crypto dep). */
+/**
+ * Stable djb2 hash → unsigned hex (no crypto dep).
+ * Walks char codes directly (no intermediate array allocation) since this
+ * runs on the decisionCache fingerprint hot path (method/path/ip/query/UA/
+ * body-slice, up to `FINGERPRINT_BODY_MAX` chars).
+ */
 export function hashString(input: string): string {
-  const hash = Array.from({ length: input.length }).reduce<number>(
-    (acc, _, index) => ((acc << 5) + acc + input.charCodeAt(index)) | 0,
-    5381,
-  );
+  let hash = 5381;
+  for (let index = 0; index < input.length; index += 1) {
+    hash = ((hash << 5) + hash + input.charCodeAt(index)) | 0;
+  }
   return (hash >>> 0).toString(16);
 }
 

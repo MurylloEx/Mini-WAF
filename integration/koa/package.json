@@ -1,0 +1,14 @@
+{
+  "name": "mini-waf-integration-koa",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "@koa/router": "^15.0.0",
+    "koa": "^2.16.1",
+    "koa-bodyparser": "^4.4.1",
+    "mini-waf": "file:../.."
+  }
+}

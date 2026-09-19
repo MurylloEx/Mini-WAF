@@ -1,0 +1,12 @@
+{
+  "name": "mini-waf-integration-fastify",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "fastify": "^5.2.1",
+    "mini-waf": "file:../.."
+  }
+}
