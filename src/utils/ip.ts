@@ -1,9 +1,13 @@
 import { isIP, isIPv4, isIPv6 } from 'node:net';
+import { LruCache } from '@/utils/lru';
 
 /**
  * Pure client-IP helpers for dual-stack (IPv4 / IPv6 / IPv4-mapped) handling.
  * Prefer these over ad-hoc string compares so rate-limit keys and equals match.
  */
+
+/** Cross-request LRU for normalized IP strings (article-style geo/IP memo). */
+const IP_NORMALIZE_CACHE = new LruCache<string>(2048);
 
 /** Strip surrounding whitespace and optional URI brackets (`[addr]`). */
 function stripBrackets(raw: string): string {
@@ -173,14 +177,24 @@ function formatIpv6(hextets: readonly number[]): string {
  * - collapses IPv4-mapped IPv6 (`::ffff:a.b.c.d`) to dotted IPv4
  * - compresses equivalent IPv6 forms to a canonical lowercase representation
  * - leaves non-IP opaque strings intact after trim/bracket strip
+ *
+ * Results are memoized in a small process-local LRU (max 2048) to avoid
+ * repeating expansion work for hot client IPs.
  */
 export function normalizeClientIp(raw: string): string {
+  const hit = IP_NORMALIZE_CACHE.get(raw);
+  if (hit !== undefined) {
+    return hit;
+  }
+
   const prepared = stripZoneId(stripBrackets(raw));
   if (prepared.length === 0) {
+    IP_NORMALIZE_CACHE.set(raw, '');
     return '';
   }
 
   if (isIPv4(prepared)) {
+    IP_NORMALIZE_CACHE.set(raw, prepared);
     return prepared;
   }
 
@@ -189,13 +203,27 @@ export function normalizeClientIp(raw: string): string {
     if (hextets !== undefined) {
       const mapped = ipv4MappedFromHextets(hextets);
       if (mapped !== undefined) {
+        IP_NORMALIZE_CACHE.set(raw, mapped);
         return mapped;
       }
-      return formatIpv6(hextets);
+      const compressed = formatIpv6(hextets);
+      IP_NORMALIZE_CACHE.set(raw, compressed);
+      return compressed;
     }
   }
 
+  IP_NORMALIZE_CACHE.set(raw, prepared);
   return prepared;
+}
+
+/** Test / ops helper: clear the IP normalization LRU. */
+export function clearIpNormalizeCache(): void {
+  IP_NORMALIZE_CACHE.clear();
+}
+
+/** Test helper: current IP cache size. */
+export function ipNormalizeCacheSize(): number {
+  return IP_NORMALIZE_CACHE.size;
 }
 
 /**

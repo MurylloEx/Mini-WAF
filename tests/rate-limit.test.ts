@@ -26,25 +26,61 @@ describe('applyRateLimitHit (immutable)', () => {
   });
 
   it('prunes idle buckets into a new map', () => {
-    let state = emptyRateLimitState();
-    state = applyRateLimitHit(state, 'a', 10, 1_000, 0).state;
-    state = applyRateLimitHit(state, 'b', 10, 1_000, 5_000).state;
-    const pruned = pruneRateLimitState(state, 2_000, 5_500);
+    const withA = applyRateLimitHit(emptyRateLimitState(), 'a', 10, 1_000, 0)
+      .state;
+    const withBoth = applyRateLimitHit(withA, 'b', 10, 1_000, 5_000).state;
+    const pruned = pruneRateLimitState(withBoth, 2_000, 5_500);
     expect(pruned.has('a')).toBe(false);
     expect(pruned.has('b')).toBe(true);
   });
 });
 
 describe('RateLimitStore', () => {
-  it('replaces state atomically via replace()', () => {
+  it('applies hits in place without losing prior keys', () => {
     const store = new RateLimitStore();
-    const hit = store.hit('k', 1, 1000, 10);
-    expect(hit.count).toBe(1);
+    expect(store.hit('a', 10, 1_000, 10).count).toBe(1);
+    expect(store.hit('b', 10, 1_000, 20).count).toBe(1);
+    expect(store.hit('a', 10, 1_000, 30).count).toBe(2);
+    expect(store.size()).toBe(2);
+    expect(store.snapshot().get('a')).toEqual([10, 30]);
+    expect(store.snapshot().get('b')).toEqual([20]);
+  });
 
-    const snapshot = store.snapshot();
-    const next = applyRateLimitHit(snapshot, 'k', 1, 1000, 20).state;
+  it('evicts the least-recently used key when over maxKeys', () => {
+    const store = new RateLimitStore(emptyRateLimitState(), {
+      maxKeys: 2,
+      pruneEveryHits: 0,
+    });
+    store.hit('a', 100, 60_000, 1);
+    store.hit('b', 100, 60_000, 2);
+    store.hit('a', 100, 60_000, 3); // refresh a
+    store.hit('c', 100, 60_000, 4); // evicts b
+    expect(store.size()).toBe(2);
+    expect(store.snapshot().has('a')).toBe(true);
+    expect(store.snapshot().has('b')).toBe(false);
+    expect(store.snapshot().has('c')).toBe(true);
+  });
+
+  it('prunes idle keys', () => {
+    const store = new RateLimitStore(emptyRateLimitState(), {
+      maxKeys: 100,
+      pruneEveryHits: 0,
+      idleMs: 1_000,
+    });
+    store.hit('old', 10, 500, 0);
+    store.hit('fresh', 10, 500, 5_000);
+    store.prune(2_000, 5_500);
+    expect(store.snapshot().has('old')).toBe(false);
+    expect(store.snapshot().has('fresh')).toBe(true);
+  });
+
+  it('replace() reseeds buckets from a ReadonlyMap', () => {
+    const store = new RateLimitStore();
+    store.hit('k', 1, 1000, 10);
+    const next = applyRateLimitHit(emptyRateLimitState(), 'k', 1, 1000, 20)
+      .state;
     store.replace(next);
-    expect(store.snapshot()).toBe(next);
-    expect(store.snapshot()).not.toBe(snapshot);
+    expect(store.snapshot().get('k')).toEqual([20]);
+    expect(store.size()).toBe(1);
   });
 });

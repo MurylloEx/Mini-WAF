@@ -127,6 +127,49 @@ export class AppModule implements NestModule {
 
 Functional factory (no module): `nestMiddleware({ presets: ['default'], level: 'balanced' })`.
 
+### Custom adapter
+
+For frameworks without a built-in integration, use `createAdapter` + `createMiniWaf`:
+
+```ts
+import { createAdapter, createMiniWaf } from 'mini-waf';
+
+interface KoaCtx {
+  method: string;
+  url: string;
+  ip: string;
+  headers: Record<string, string>;
+  query: Record<string, string>;
+  request: { rawBody?: string };
+  status: number;
+  body: string;
+  get(name: string): string | undefined;
+  set(name: string, value: string): void;
+}
+
+const koaAdapter = createAdapter<KoaCtx, KoaCtx>({
+  name: 'koa',
+  getMethod: (ctx) => ctx.method,
+  getUrl: (ctx) => ctx.url,
+  getIp: (ctx) => ctx.ip,
+  getHeader: (ctx, name) => ctx.get(name),
+  getHeaders: (ctx) => ctx.headers,
+  getQuery: (ctx) => ctx.query,
+  getRawBody: (ctx) => ctx.request.rawBody ?? '',
+  setResponseHeader: (ctx, name, value) => ctx.set(name, String(value)),
+  drop: (ctx, _res, status, body) => {
+    ctx.status = status;
+    ctx.body = body;
+  },
+});
+
+const waf = createMiniWaf({ presets: ['default'], level: 'balanced' });
+
+// in middleware:
+const result = await waf.protect(koaAdapter, ctx, ctx);
+if (result.decision === 'allow') await next();
+```
+
 ---
 
 ## Configuration
@@ -144,8 +187,31 @@ Everything goes through `WafConfig` in `expressWaf(config)`, `fastifyWaf` (`conf
   blockBody?: string;          // default: 'Forbidden'
   logging?: false | true | { level?: 'error' | 'info' | 'debug'; sink?: WafLogger };
   // logging default: false (off — no I/O)
+
+  // Performance (all optional)
+  maxFieldLength?: number;     // truncate scanned field values; default 8192 (0 = unlimited)
+  ruleYieldEvery?: number;     // yield to event loop every N rules; default 32 (0 = off)
+  maxRateLimitKeys?: number;   // LRU cap on distinct rate-limit keys; default 10000
+  decisionCache?: { max?: number; ttlMs?: number }; // short-TTL decision LRU; off by default
 }
 ```
+
+### Performance knobs
+
+| Option | Default | Purpose |
+|--------|---------|---------|
+| `maxFieldLength` | `8192` | Truncate each scanned field value (body, query, headers, …) **before** matching / regex. Limits regex cost on huge payloads without rejecting the HTTP body itself. Set `0` for unlimited (not recommended in production). |
+| `ruleYieldEvery` | `32` | After every N rules, `handle` awaits `setImmediate` so large rule packs do not starve the event loop. Packs with fewer than N rules skip yielding (fully synchronous scan, still returns a `Promise`). Set `0` to always disable yielding. Safe together with `rateLimit` rules: counters live in a shared in-place store (no snapshot/replace race). |
+| `maxRateLimitKeys` | `10000` | Cap on distinct rate-limit keys (usually per-IP buckets). Cold keys are evicted LRU-style when the cap is exceeded; idle keys are also pruned opportunistically. Bounds memory/CPU under IP floods even when `preset-dos-rate-limit` is active. |
+| `decisionCache` | omitted (off) | Tiny LRU of allow/block decisions keyed by method + path + IP + query + UA + body hash. **Automatically disabled** when any active rule uses `rateLimit` so DoS counters still advance. Use only for mostly-static pattern rules; keep `max` / `ttlMs` small (defaults: 256 / 1000ms). |
+
+Normalized client IPs are also memoized in a process-local LRU (max 2048) — the same idea as geo/IP caches in lightweight WAF tutorials, without an external `lru-cache` dependency.
+
+After the first matching `block`, later pure `block` rules (no `rateLimit` in their condition tree) are skipped. `allow`, `log`, and any rule with rate-limit side effects still run in order.
+
+**Field bags vs specific fields:** Prefer `query.id` / `headers.user-agent` over bag fields (`query`, `headers`, `cookies`) when you know the target. Bags OR across every value and amplify matcher cost (especially regex and `includes`). Static `includes` needles are lowercased once at rule load; haystacks are memoized per request.
+
+**Regex / CRS-like patterns:** Node has no sync RegExp timeout and no built-in RE2. Catastrophic backtracking on long strings is mitigated by `maxFieldLength` truncation before `matches`. Avoid nested quantifiers on attacker-controlled input (`(a+)+`, overlapping alternations on huge bodies). For hard guarantees, run matching in a worker with a wall-clock budget or use a linear-time engine outside this library.
 
 ### Levels (`level`)
 
@@ -303,14 +369,14 @@ const rules: WafRule[] = [
 | Field | Description |
 |-------|-------------|
 | `ip`, `method`, `path`, `url`, `body`, `files` | simple values |
-| `query`, `headers`, `cookies` | all values (OR) |
-| `query.*`, `headers.*`, `cookies.*` | specific field |
+| `query`, `headers`, `cookies` | all values (OR) — prefer dotted paths when possible |
+| `query.*`, `headers.*`, `cookies.*` | specific field (cheaper than bags) |
 
 ### Matchers
 
-- `matches`: `string` \| `RegExp` \| `readonly string[]`
+- `matches`: `string` \| `RegExp` \| `readonly string[]` (runs on truncated field values when `maxFieldLength` > 0)
 - `equals`: exact equality
-- `includes`: case-insensitive substring
+- `includes`: case-insensitive substring (needle lowercased at rule load)
 - `rateLimit: { max, windowMs, keyPrefix? }`
 - Compounds: `{ all: [...] }`, `{ anyOf: [...] }`, `{ not: ... }`
 
@@ -393,51 +459,6 @@ app.listen(3000);
 ```
 
 The same `rules` / `presets` / `level` work with Fastify (`config`) and Nest (`MiniWafModule.forRoot({ config })`).
-
----
-
-## Custom adapter (advanced)
-
-For frameworks without a built-in integration, use `createAdapter` + `createMiniWaf`:
-
-```ts
-import { createAdapter, createMiniWaf } from 'mini-waf';
-
-interface KoaCtx {
-  method: string;
-  url: string;
-  ip: string;
-  headers: Record<string, string>;
-  query: Record<string, string>;
-  request: { rawBody?: string };
-  status: number;
-  body: string;
-  get(name: string): string | undefined;
-  set(name: string, value: string): void;
-}
-
-const koaAdapter = createAdapter<KoaCtx, KoaCtx>({
-  name: 'koa',
-  getMethod: (ctx) => ctx.method,
-  getUrl: (ctx) => ctx.url,
-  getIp: (ctx) => ctx.ip,
-  getHeader: (ctx, name) => ctx.get(name),
-  getHeaders: (ctx) => ctx.headers,
-  getQuery: (ctx) => ctx.query,
-  getRawBody: (ctx) => ctx.request.rawBody ?? '',
-  setResponseHeader: (ctx, name, value) => ctx.set(name, String(value)),
-  drop: (ctx, _res, status, body) => {
-    ctx.status = status;
-    ctx.body = body;
-  },
-});
-
-const waf = createMiniWaf({ presets: ['default'], level: 'balanced' });
-
-// in middleware:
-const result = await waf.protect(koaAdapter, ctx, ctx);
-if (result.decision === 'allow') await next();
-```
 
 ---
 

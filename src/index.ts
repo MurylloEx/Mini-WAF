@@ -21,7 +21,10 @@ export {
   normalizeClientIp,
   pickClientIpFromXff,
   isHostIpLiteral,
+  clearIpNormalizeCache,
+  ipNormalizeCacheSize,
 } from '@/utils/ip';
+export { LruCache, type LruEntry } from '@/utils/lru';
 
 export { expressWaf, expressSecurityPolicy } from '@/express';
 export {

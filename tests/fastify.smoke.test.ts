@@ -5,7 +5,8 @@ import { fastifyWaf } from '@/fastify';
 describe('fastify smoke', () => {
   it('blocks scanner UA and allows clean GET', async () => {
     const app = Fastify();
-    await app.register(fastifyWaf, {
+    // Structural FastifyLike* types are intentionally framework-agnostic.
+    await app.register(fastifyWaf as never, {
       config: { presets: ['scanners'] },
     });
     app.get('/ping', async () => 'pong');

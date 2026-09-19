@@ -6,12 +6,14 @@ import {
   isNotCondition,
 } from '@/domain/rules';
 import type { WafHttpContext } from '@/domain/context';
-import { includesIgnoreCase, matchesPattern } from '@/engine/matcher';
-import { resolveFieldJoined, resolveFieldValues } from '@/engine/field-resolver';
+import { includesLower, matchesPattern } from '@/engine/matcher';
 import {
-  applyRateLimitHit,
-  type RateLimitState,
-} from '@/engine/rate-limit';
+  resolveFieldJoined,
+  resolveFieldValues,
+  resolveFieldValuesLower,
+  type FieldResolveOptions,
+} from '@/engine/field-resolver';
+import type { RateLimitPort } from '@/engine/rate-limit';
 
 export interface RateLimitInfo {
   readonly limit: number;
@@ -19,18 +21,26 @@ export interface RateLimitInfo {
   readonly resetAt: number;
 }
 
-/** Pure evaluation result: match flag + next rate-limit state. */
+/** Evaluation result: match flag + optional rate-limit headers payload. */
 export interface ConditionEvaluation {
   readonly matched: boolean;
-  readonly rateLimitState: RateLimitState;
   readonly rateLimitInfo: RateLimitInfo | undefined;
 }
+
+export interface EvaluateOptions {
+  readonly fields: FieldResolveOptions;
+}
+
+const DEFAULT_EVAL_OPTIONS: EvaluateOptions = {
+  fields: { maxFieldLength: 0 },
+};
 
 function patternMatchesField(
   ctx: WafHttpContext,
   condition: FieldCondition,
+  fields: FieldResolveOptions,
 ): boolean {
-  const values = resolveFieldValues(ctx, condition.field);
+  const values = resolveFieldValues(ctx, condition.field, fields);
   const hasPattern =
     condition.matches !== undefined ||
     condition.equals !== undefined ||
@@ -40,15 +50,26 @@ function patternMatchesField(
     return false;
   }
 
-  return values.some((value) => {
+  // Prefer pre-lowercased needles (normalizeRules); still lower once here for
+  // callers that pass raw conditions into evaluateCondition.
+  const needleLower =
+    condition.includes !== undefined
+      ? condition.includes.toLowerCase()
+      : undefined;
+  const lowerValues =
+    needleLower !== undefined
+      ? resolveFieldValuesLower(ctx, condition.field, fields)
+      : undefined;
+
+  return values.some((value, index) => {
     if (condition.equals !== undefined && value === condition.equals) {
       return true;
     }
-    if (
-      condition.includes !== undefined &&
-      includesIgnoreCase(value, condition.includes)
-    ) {
-      return true;
+    if (needleLower !== undefined && lowerValues !== undefined) {
+      const haystackLower = lowerValues[index] ?? value.toLowerCase();
+      if (includesLower(haystackLower, needleLower)) {
+        return true;
+      }
     }
     if (
       condition.matches !== undefined &&
@@ -63,19 +84,21 @@ function patternMatchesField(
 function evaluateField(
   ctx: WafHttpContext,
   condition: FieldCondition,
-  rateLimitState: RateLimitState,
+  rateLimits: RateLimitPort,
+  fields: FieldResolveOptions,
 ): ConditionEvaluation {
   const hasPattern =
     condition.matches !== undefined ||
     condition.equals !== undefined ||
     condition.includes !== undefined;
 
-  const patternOk = hasPattern ? patternMatchesField(ctx, condition) : true;
+  const patternOk = hasPattern
+    ? patternMatchesField(ctx, condition, fields)
+    : true;
 
   if (hasPattern && !patternOk) {
     return {
       matched: false,
-      rateLimitState,
       rateLimitInfo: undefined,
     };
   }
@@ -83,131 +106,170 @@ function evaluateField(
   if (!condition.rateLimit) {
     return {
       matched: hasPattern,
-      rateLimitState,
       rateLimitInfo: undefined,
     };
   }
 
   const keyMaterial =
     condition.rateLimit.keyPrefix !== undefined
-      ? `${condition.rateLimit.keyPrefix}:${resolveFieldJoined(ctx, condition.field)}`
-      : `${condition.field}:${resolveFieldJoined(ctx, condition.field)}`;
+      ? `${condition.rateLimit.keyPrefix}:${resolveFieldJoined(ctx, condition.field, fields)}`
+      : `${condition.field}:${resolveFieldJoined(ctx, condition.field, fields)}`;
 
-  const transition = applyRateLimitHit(
-    rateLimitState,
+  const hit = rateLimits.hit(
     keyMaterial,
     condition.rateLimit.max,
     condition.rateLimit.windowMs,
   );
 
-  const rateLimitInfo: RateLimitInfo = {
-    limit: condition.rateLimit.max,
-    remaining: transition.hit.remaining,
-    resetAt: transition.hit.resetAt,
-  };
-
-  // Rate-limit-only → match when exceeded.
-  // Pattern + rate limit → both must hold.
-  const matched = hasPattern
-    ? transition.hit.exceeded
-    : transition.hit.exceeded;
-
   return {
-    matched,
-    rateLimitState: transition.state,
-    rateLimitInfo,
+    matched: hit.exceeded,
+    rateLimitInfo: {
+      limit: condition.rateLimit.max,
+      remaining: hit.remaining,
+      resetAt: hit.resetAt,
+    },
   };
 }
 
-function foldAll(
+function foldAllSeq(
   ctx: WafHttpContext,
   children: readonly WafCondition[],
-  rateLimitState: RateLimitState,
+  index: number,
+  lastInfo: RateLimitInfo | undefined,
+  rateLimits: RateLimitPort,
+  options: EvaluateOptions,
 ): ConditionEvaluation {
-  let state = rateLimitState;
-  let lastInfo: RateLimitInfo | undefined;
-
-  for (const child of children) {
-    const result = evaluateCondition(ctx, child, state);
-    state = result.rateLimitState;
-    if (result.rateLimitInfo) {
-      lastInfo = result.rateLimitInfo;
-    }
-    if (!result.matched) {
-      return {
-        matched: false,
-        rateLimitState: state,
-        rateLimitInfo: lastInfo,
-      };
-    }
+  if (index >= children.length) {
+    return {
+      matched: children.length > 0,
+      rateLimitInfo: lastInfo,
+    };
   }
 
-  return {
-    matched: children.length > 0,
-    rateLimitState: state,
-    rateLimitInfo: lastInfo,
-  };
+  const child = children[index];
+  if (child === undefined) {
+    return foldAllSeq(
+      ctx,
+      children,
+      index + 1,
+      lastInfo,
+      rateLimits,
+      options,
+    );
+  }
+
+  const result = evaluateCondition(ctx, child, rateLimits, options);
+  const nextInfo = result.rateLimitInfo ?? lastInfo;
+  if (!result.matched) {
+    return {
+      matched: false,
+      rateLimitInfo: nextInfo,
+    };
+  }
+
+  return foldAllSeq(
+    ctx,
+    children,
+    index + 1,
+    nextInfo,
+    rateLimits,
+    options,
+  );
 }
 
-function foldAnyOf(
+function foldAnyOfSeq(
   ctx: WafHttpContext,
   children: readonly WafCondition[],
-  rateLimitState: RateLimitState,
+  index: number,
+  lastInfo: RateLimitInfo | undefined,
+  rateLimits: RateLimitPort,
+  options: EvaluateOptions,
 ): ConditionEvaluation {
-  let state = rateLimitState;
-  let lastInfo: RateLimitInfo | undefined;
-
-  for (const child of children) {
-    const result = evaluateCondition(ctx, child, state);
-    state = result.rateLimitState;
-    if (result.rateLimitInfo) {
-      lastInfo = result.rateLimitInfo;
-    }
-    if (result.matched) {
-      return {
-        matched: true,
-        rateLimitState: state,
-        rateLimitInfo: lastInfo,
-      };
-    }
+  if (index >= children.length) {
+    return {
+      matched: false,
+      rateLimitInfo: lastInfo,
+    };
   }
 
-  return {
-    matched: false,
-    rateLimitState: state,
-    rateLimitInfo: lastInfo,
-  };
+  const child = children[index];
+  if (child === undefined) {
+    return foldAnyOfSeq(
+      ctx,
+      children,
+      index + 1,
+      lastInfo,
+      rateLimits,
+      options,
+    );
+  }
+
+  const result = evaluateCondition(ctx, child, rateLimits, options);
+  const nextInfo = result.rateLimitInfo ?? lastInfo;
+  if (result.matched) {
+    return {
+      matched: true,
+      rateLimitInfo: nextInfo,
+    };
+  }
+
+  return foldAnyOfSeq(
+    ctx,
+    children,
+    index + 1,
+    nextInfo,
+    rateLimits,
+    options,
+  );
 }
 
 /**
- * Pure condition evaluator.
- * Side effects (logging, response headers) are left to the engine layer.
+ * Condition evaluator. Rate-limit side effects go through {@link RateLimitPort}
+ * (typically the shared {@link import('./rate-limit').RateLimitStore}).
  */
 export function evaluateCondition(
   ctx: WafHttpContext,
   condition: WafCondition,
-  rateLimitState: RateLimitState,
+  rateLimits: RateLimitPort,
+  options: EvaluateOptions = DEFAULT_EVAL_OPTIONS,
 ): ConditionEvaluation {
   if (isFieldCondition(condition)) {
-    return evaluateField(ctx, condition, rateLimitState);
+    return evaluateField(ctx, condition, rateLimits, options.fields);
   }
   if (isAllCondition(condition)) {
-    return foldAll(ctx, condition.all, rateLimitState);
+    return foldAllSeq(
+      ctx,
+      condition.all,
+      0,
+      undefined,
+      rateLimits,
+      options,
+    );
   }
   if (isAnyOfCondition(condition)) {
-    return foldAnyOf(ctx, condition.anyOf, rateLimitState);
+    return foldAnyOfSeq(
+      ctx,
+      condition.anyOf,
+      0,
+      undefined,
+      rateLimits,
+      options,
+    );
   }
   if (isNotCondition(condition)) {
-    const inner = evaluateCondition(ctx, condition.not, rateLimitState);
+    const inner = evaluateCondition(
+      ctx,
+      condition.not,
+      rateLimits,
+      options,
+    );
     return {
       matched: !inner.matched,
-      rateLimitState: inner.rateLimitState,
       rateLimitInfo: inner.rateLimitInfo,
     };
   }
   return {
     matched: false,
-    rateLimitState,
     rateLimitInfo: undefined,
   };
 }

@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { matchesPattern, includesIgnoreCase } from '@/engine/matcher';
+import {
+  matchesPattern,
+  includesIgnoreCase,
+  includesLower,
+} from '@/engine/matcher';
 
 describe('matchesPattern', () => {
   it('matches exact strings', () => {
@@ -38,5 +42,12 @@ describe('includesIgnoreCase', () => {
   it('short-circuits on empty or longer needle', () => {
     expect(includesIgnoreCase('abc', '')).toBe(true);
     expect(includesIgnoreCase('ab', 'abc')).toBe(false);
+  });
+});
+
+describe('includesLower', () => {
+  it('assumes both sides are already lowercased', () => {
+    expect(includesLower('hello world', 'world')).toBe(true);
+    expect(includesLower('hello world', 'WORLD')).toBe(false);
   });
 });

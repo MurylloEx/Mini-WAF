@@ -20,10 +20,9 @@ async function listen(app: express.Express): Promise<{
 describe('express smoke', () => {
   it('blocks SQLi and allows clean GET', async () => {
     const app = express();
+    // Structural ExpressLike* types are intentionally framework-agnostic.
     app.use(
-      expressWaf(
-        { presets: ['sqli'] },
-      ),
+      expressWaf({ presets: ['sqli'] }) as express.RequestHandler,
     );
     app.get('/items', (_req, res) => {
       res.status(200).send('ok');

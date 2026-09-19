@@ -1,6 +1,6 @@
 {
   "name": "mini-waf",
-  "version": "3.0.0",
+  "version": "1.0.0",
   "description": "Minimalistic Web Application Firewall for Node.js — declarative rules, immutable engine, Express/Fastify/NestJS adapters.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -38,7 +38,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json && tsc-alias -p tsconfig.json",
     "clean": "rm -rf dist",
-    "lint": "tsc -p tsconfig.json --noEmit",
+    "lint": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.tests.json --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "prepare": "npm run build"

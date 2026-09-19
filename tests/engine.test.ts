@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createWafEngine, scanRules } from '@/engine/engine';
-import { emptyRateLimitState } from '@/engine/rate-limit';
+import { RateLimitStore } from '@/engine/rate-limit';
 import type { WafRule } from '@/domain/rules';
 import { createMockContext } from './helpers/mock-context';
 
@@ -84,7 +84,7 @@ describe('scanRules immutability', () => {
       query: { id: 'safe' },
       headers: { 'user-agent': 'curl' },
     });
-    const scan = scanRules(mock.ctx, frozen, emptyRateLimitState());
+    const scan = scanRules(mock.ctx, frozen, new RateLimitStore());
     expect(frozen).toHaveLength(2);
     expect(scan.loggedRules).toHaveLength(1);
     expect(scan.loggedRules).not.toBe(frozen);

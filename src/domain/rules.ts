@@ -166,6 +166,36 @@ export interface WafConfig {
    * - `{ level?, sink? }` — verbosity + optional injectable {@link import('../logging/port').WafLogger}
    */
   readonly logging?: WafLoggingSetting;
+  /**
+   * Cap length of each field value scanned by matchers (body, query, headers, …).
+   * Longer values are truncated for matching / rate-limit key material only
+   * (the HTTP body itself is not rejected).
+   * Default: `8192`. Set `0` for unlimited (not recommended in production).
+   */
+  readonly maxFieldLength?: number;
+  /**
+   * Yield to the event loop every N rules during evaluation so large rule sets
+   * do not starve other work. Default: `32`. Set `0` to disable yielding.
+   * Packs smaller than this interval skip yielding (sync scan path).
+   * Safe with `rateLimit` rules: counters live in a shared in-place store.
+   */
+  readonly ruleYieldEvery?: number;
+  /**
+   * Cap on distinct rate-limit keys (typically per-IP buckets). Cold keys are
+   * evicted LRU-style when the cap is exceeded. Default: `10000`.
+   */
+  readonly maxRateLimitKeys?: number;
+  /**
+   * Optional short-TTL LRU of allow/block decisions keyed by a request fingerprint
+   * (method + path + IP + query + UA + body hash).
+   *
+   * **Disabled automatically** when any active rule uses `rateLimit` so DoS
+   * counters always advance. Default: off.
+   */
+  readonly decisionCache?: {
+    readonly max?: number;
+    readonly ttlMs?: number;
+  };
 }
 
 export type WafDecision = 'allow' | 'block';

@@ -56,13 +56,23 @@ export async function runWithAdapter<TRequest, TResponse, TNext>(
 export {
   createWafEngine,
   scanRules,
+  scanRulesAsync,
   filterRulesByLevel,
   buildRuleList,
+  DEFAULT_MAX_FIELD_LENGTH,
   type WafEngine,
   type WafEngineOptions,
   type ResolvedWafConfig,
+  type ResolvedPerformance,
   type ScanState,
+  type ScanOptions,
 } from '@/engine/engine';
+export {
+  conditionHasRateLimit,
+  rulesHaveRateLimit,
+} from '@/engine/condition-utils';
+export { requestFingerprint, hashString } from '@/engine/fingerprint';
+export { LruCache, type LruEntry } from '@/utils/lru';
 export {
   filterRulesByEnabledIds,
   filterRulesByDisabledIds,
@@ -75,22 +85,36 @@ export {
 export {
   matchesPattern,
   includesIgnoreCase,
+  includesLower,
 } from '@/engine/matcher';
 export {
+  normalizeCondition,
+  normalizeRule,
+  normalizeRules,
+} from '@/engine/normalize-condition';
+export {
   resolveFieldValues,
+  resolveFieldValuesLower,
   resolveFieldJoined,
+  type FieldResolveOptions,
 } from '@/engine/field-resolver';
 export {
   evaluateCondition,
   type ConditionEvaluation,
   type RateLimitInfo,
+  type EvaluateOptions,
 } from '@/engine/evaluate';
 export {
   emptyRateLimitState,
   applyRateLimitHit,
   pruneRateLimitState,
   RateLimitStore,
+  DEFAULT_MAX_RATE_LIMIT_KEYS,
+  DEFAULT_RATE_LIMIT_IDLE_MS,
+  DEFAULT_RATE_LIMIT_PRUNE_EVERY,
   type RateLimitState,
   type RateLimitHit,
   type RateLimitTransition,
+  type RateLimitPort,
+  type RateLimitStoreOptions,
 } from '@/engine/rate-limit';

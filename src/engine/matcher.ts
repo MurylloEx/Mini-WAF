@@ -21,12 +21,24 @@ export function matchesPattern(value: string, pattern: MatchPattern): boolean {
   return false;
 }
 
-export function includesIgnoreCase(haystack: string, needle: string): boolean {
-  if (needle.length === 0) {
+/**
+ * Case-insensitive substring check when both sides are already lowercased.
+ * Prefer this on hot paths (pre-lower needle at rule load; memoize haystacks).
+ */
+export function includesLower(
+  haystackLower: string,
+  needleLower: string,
+): boolean {
+  if (needleLower.length === 0) {
     return true;
   }
-  if (needle.length > haystack.length) {
+  if (needleLower.length > haystackLower.length) {
     return false;
   }
-  return haystack.toLowerCase().includes(needle.toLowerCase());
+  return haystackLower.includes(needleLower);
+}
+
+/** Case-insensitive substring. Lowers both sides once per call. */
+export function includesIgnoreCase(haystack: string, needle: string): boolean {
+  return includesLower(haystack.toLowerCase(), needle.toLowerCase());
 }

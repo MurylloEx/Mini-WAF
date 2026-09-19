@@ -23,6 +23,7 @@ import type {
   JsonWafCondition,
   JsonWafRule,
 } from '@/domain/serializable';
+import { normalizeRule } from '@/engine/normalize-condition';
 
 const SCALAR_FIELDS = new Set<string>([
   'ip',
@@ -372,7 +373,7 @@ function loadRule(value: JsonValue, path: string): WafRule {
     throw new RuleParseError(path, `unexpected key "${unexpected}"`);
   }
 
-  return {
+  return normalizeRule({
     id,
     when,
     action: actionRaw,
@@ -380,7 +381,7 @@ function loadRule(value: JsonValue, path: string): WafRule {
     ...(enabled !== undefined ? { enabled } : {}),
     ...(priority !== undefined ? { priority } : {}),
     ...(minLevel !== undefined ? { minLevel } : {}),
-  };
+  });
 }
 
 /**
