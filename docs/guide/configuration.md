@@ -22,6 +22,64 @@ All options are fields on `WafConfig`. Passed to `expressWaf(config)`, `fastifyW
 }
 ```
 
+A fully annotated instance, mirroring the exact fields and defaults resolved by `resolveConfig` / `resolvePerformance` in `src/engine/engine.ts`:
+
+```ts
+import type { WafConfig } from 'mini-waf';
+
+const config: WafConfig = {
+  // Gate for `minLevel` on every rule (preset or custom). Ordering:
+  // low(0) < balanced(1) < high(2) < paranoid(3) — see src/domain/levels.ts.
+  level: 'balanced',
+
+  // Built-in packs, resolved + deduped by rule id via `resolvePresets`.
+  presets: ['default'],
+
+  // Your own rules, merged AFTER presets (same id namespace for filters below).
+  rules: [
+    { id: 'allow-health', priority: 1, action: 'allow', when: { field: 'path', equals: '/health' } },
+  ],
+
+  // If set and non-empty, ONLY these rule ids survive the level filter.
+  // Leave undefined/empty to keep everything (the common case).
+  enabledRuleIds: undefined,
+
+  // Drop these rule ids after the allowlist above is applied. Safe to
+  // combine with presets you otherwise want, minus a few noisy entries.
+  disabledRuleIds: ['preset-scanners-ua-broad'],
+
+  // HTTP status written by WafHttpContext.drop() on a block decision.
+  blockStatusCode: 403,
+
+  // Response body written alongside blockStatusCode. Plain text by default;
+  // set a JSON string yourself if your API contract expects a JSON error body.
+  blockBody: 'Forbidden',
+
+  // false (default) = zero logging I/O. true = console at 'info'. Object =
+  // explicit level + optional custom sink — see the Logging guide.
+  logging: { level: 'info' },
+
+  // Truncates each scanned field value before any matcher/regex runs. Bounds
+  // worst-case regex cost on huge bodies; 0 disables truncation entirely.
+  maxFieldLength: 8_192,
+
+  // Yields to the event loop roughly every N rules on the async scan path
+  // (subject to an internal ~1ms sync-time budget) so a large custom rule
+  // set cannot starve other requests. 0 disables yielding entirely.
+  ruleYieldEvery: 32,
+
+  // Upper bound on distinct rate-limit buckets (usually one per client IP).
+  // Oldest buckets are evicted once exceeded — bounds memory under a flood
+  // from many distinct source addresses.
+  maxRateLimitKeys: 10_000,
+
+  // Optional short-TTL LRU of full decisions keyed by a request fingerprint.
+  // Automatically disabled whenever any ACTIVE rule carries `rateLimit`, so
+  // DoS counters keep advancing instead of being served from cache.
+  decisionCache: { max: 256, ttlMs: 1_000 },
+};
+```
+
 ## Field details
 
 | Field | Type | Default | Description |

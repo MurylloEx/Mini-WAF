@@ -53,6 +53,36 @@ When any active rule has `rateLimit`, **`decisionCache` is disabled** so counter
 
 Truncation via `maxFieldLength` bounds haystack size. Still avoid pathological custom patterns (`(a+)+`, heavy overlapping alternations) on attacker-controlled input. Prefer `equals` / `includes` / string lists when sufficient.
 
+```ts
+// Avoid: nested quantifiers with overlapping character classes are the
+// classic catastrophic-backtracking shape — cost can grow exponentially
+// with input length on a crafted non-matching string (e.g. "aaaa...!").
+const dangerous: WafRule = {
+  id: 'bad-regex-example',
+  action: 'block',
+  when: { field: 'body', matches: /^(a+)+$/ },
+};
+
+// Prefer: an anchored, linear pattern, or fall back to `includes`/`equals`
+// when you are really only checking for a literal substring/prefix.
+const safer: WafRule = {
+  id: 'safe-regex-example',
+  action: 'block',
+  when: { field: 'body', includes: 'aaaa' }, // no backtracking possible
+};
+```
+
+## Interplay between `rateLimit` and `decisionCache`
+
+```ts
+createMiniWaf({
+  presets: ['default'], // includes preset-dos-rate-limit → rulesHaveRateLimit() is true
+  decisionCache: { max: 256, ttlMs: 1_000 }, // configured, but effectively INACTIVE here
+});
+```
+
+`rulesHaveRateLimit(rules)` (`src/engine/condition-utils.ts`) walks the final rule list once at engine construction time; if any active rule's condition tree contains a `rateLimit` spec — including the built-in `preset-dos-rate-limit` inside the `default`/`scanners` packs — the engine never constructs the `decisionCache` LRU at all, regardless of the `decisionCache` option being set. This is intentional: caching a decision would also cache (and thus skip re-incrementing) the rate-limit counter, defeating the DoS protection. Drop `preset-dos-rate-limit` via `disabledRuleIds` (and rely on an upstream rate limiter instead) if you need both effects simultaneously.
+
 ## What presets do not cover
 
 - Authenticated business-logic abuse

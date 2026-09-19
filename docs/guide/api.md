@@ -31,6 +31,24 @@ Lower-level engine without the `protect` sugar.
 
 Shared integration helper → `{ result, ctx }`.
 
+```ts
+import { createMiniWaf, runWithAdapter } from 'mini-waf';
+import { createExpressAdapter } from 'mini-waf/adapters';
+
+const waf = createMiniWaf({ presets: ['default'] });
+const adapter = createExpressAdapter();
+
+app.use(async (req, res, next) => {
+  const { result, ctx } = await runWithAdapter(waf, adapter, req, res, next);
+  // Unlike `expressWaf`, you get both the WafHttpContext (e.g. ctx.getIp())
+  // and the full WafEvaluationResult here — useful for custom telemetry
+  // without re-implementing the adapter wiring yourself.
+  if (result.decision === 'allow' && !ctx.isBlocked()) {
+    next();
+  }
+});
+```
+
 ### Rule loading
 
 - `parseRulesFromJson(source: string)` → `WafRule[]`

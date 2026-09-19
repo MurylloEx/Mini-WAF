@@ -20,7 +20,38 @@ expressWaf({
 
 `resolvePresets(names)` flattens packs and **dedupes by rule `id`**. Sources are never mutated.
 
-Each preset rule already has a `minLevel`; your config `level` decides which ones run.
+Each preset rule already has a `minLevel`; your config `level` decides which ones run. For reference, here is an actual preset rule verbatim (`src/presets/scanners.ts`), showing the level of detail every preset entry follows:
+
+```ts
+{
+  id: 'preset-scanners-ua',
+  priority: 40,
+  action: 'block',
+  minLevel: 'low', // active at every level, including the strictest APIs
+  reason: 'Known scanner or exploit tool',
+  when: {
+    field: 'headers.user-agent',
+    matches:
+      /(?:sqlmap|nikto|nmap|masscan|acunetix|nessus|burpsuite|w3af|dirbuster|owasp_dirbuster|havij|openvas|zgrab|nuclei)/i,
+  },
+},
+```
+
+And the DoS rate-limit rule from the same pack, the one that automatically disables `decisionCache` whenever it is active (see [Security notes](/guide/security)):
+
+```ts
+{
+  id: 'preset-dos-rate-limit',
+  priority: 90,
+  action: 'block',
+  minLevel: 'balanced',
+  reason: 'Possible Denial of Service — request rate exceeded',
+  when: {
+    field: 'ip',
+    rateLimit: { max: 120, windowMs: 60_000, keyPrefix: 'preset-dos' },
+  },
+},
+```
 
 ## Overview (CRS-inspired)
 
