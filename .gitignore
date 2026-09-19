@@ -4,3 +4,5 @@ logs/
 *.log
 .DS_Store
 *.tsbuildinfo
+docs/.vitepress/dist
+docs/.vitepress/cache

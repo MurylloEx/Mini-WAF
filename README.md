@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://user-images.githubusercontent.com/32225687/78806753-849c1480-7999-11ea-8ad5-4f15ce5ad5fa.png" alt="Mini WAF" width="192" height="192"/>
+  <img src="./mini-waf-logo.png" alt="Mini-WAF — Web Application Firewall" width="420"/>
 </p>
 
 <p align="center">
@@ -16,6 +16,8 @@
 Minimal Web Application Firewall for Node.js (**v3**). Plug it in as middleware/plugin and evaluate each request with typed presets and declarative rules.
 
 Supports **Express**, **Fastify**, and **NestJS** (optional peers — install only the framework you use).
+
+**Documentation:** [https://mini-waf.github.io](https://mini-waf.github.io) (source in [`docs/`](./docs/); run locally with `npm run docs:dev`)
 
 ## Install
 

@@ -45,7 +45,10 @@
     "bench": "npm run build && node benchmarks/run.mjs",
     "bench:http": "npm run build && node benchmarks/http.mjs",
     "bench:compare": "npm run build && node benchmarks/compare.mjs",
-    "integration": "npm run build && npm install --prefix integration && npm run integration --prefix integration"
+    "integration": "npm run build && npm install --prefix integration && npm run integration --prefix integration",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
   },
   "repository": {
     "type": "git",
@@ -94,6 +97,7 @@
     "fastify": "^5.2.1",
     "tsc-alias": "^1.9.5",
     "typescript": "^5.8.3",
+    "vitepress": "^1.6.4",
     "vitest": "^5.0.1"
   }
 }
