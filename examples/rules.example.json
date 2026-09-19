@@ -1,0 +1,46 @@
+[
+  {
+    "id": "block-union-select",
+    "action": "block",
+    "reason": "Possible SQL injection (CRS-inspired REQUEST-942 idea)",
+    "minLevel": "low",
+    "when": {
+      "field": "query",
+      "matches": { "pattern": "\\bunion\\s+(?:all\\s+)?select\\b", "flags": "i" }
+    }
+  },
+  {
+    "id": "block-script-tag",
+    "action": "block",
+    "reason": "Possible XSS (CRS-inspired REQUEST-941 idea)",
+    "minLevel": "balanced",
+    "when": {
+      "field": "body",
+      "matches": { "pattern": "<\\s*script\\b", "flags": "i" }
+    }
+  },
+  {
+    "id": "block-scanner-ua",
+    "action": "block",
+    "reason": "Known scanner User-Agent",
+    "when": {
+      "field": "headers.user-agent",
+      "matches": { "pattern": "sqlmap|nikto|acunetix", "flags": "i" }
+    }
+  },
+  {
+    "id": "rate-limit-ip",
+    "action": "block",
+    "reason": "Too many requests",
+    "when": {
+      "field": "ip",
+      "rateLimit": { "max": 100, "windowMs": 60000 }
+    }
+  },
+  {
+    "id": "allow-health",
+    "action": "allow",
+    "priority": 1,
+    "when": { "field": "path", "equals": "/health" }
+  }
+]

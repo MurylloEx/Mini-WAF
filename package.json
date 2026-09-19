@@ -1,31 +1,95 @@
 {
   "name": "mini-waf",
-  "version": "0.4.98",
-  "description": "Create a safety NodeJS server with Minimalistic WAF library based on deflectjs hook engine.",
-  "main": "wafbase.js",
+  "version": "3.0.0",
+  "description": "Minimalistic Web Application Firewall for Node.js — declarative rules, immutable engine, Express/Fastify/NestJS adapters.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./express": {
+      "types": "./dist/express.d.ts",
+      "default": "./dist/express.js"
+    },
+    "./fastify": {
+      "types": "./dist/fastify.d.ts",
+      "default": "./dist/fastify.js"
+    },
+    "./nestjs": {
+      "types": "./dist/nestjs.d.ts",
+      "default": "./dist/nestjs.js"
+    },
+    "./adapters": {
+      "types": "./dist/adapters/index.d.ts",
+      "default": "./dist/adapters/index.js"
+    },
+    "./presets": {
+      "types": "./dist/presets/index.d.ts",
+      "default": "./dist/presets/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
   "scripts": {
-    "test": "node test.js && echo \"Successfully tested package Mini-WAF!\" && exit 0;"
+    "build": "tsc -p tsconfig.json && tsc-alias -p tsconfig.json",
+    "clean": "rm -rf dist",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepare": "npm run build"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/MurylloEx/Mini-WAF"
   },
   "keywords": [
-    "cryptography",
-    "security",
-    "sanitize",
-    "filter",
     "waf",
-    "web",
-    "firewall"
+    "firewall",
+    "security",
+    "express",
+    "fastify",
+    "nestjs",
+    "middleware",
+    "adapter",
+    "typescript"
   ],
   "author": "Muryllo Pimenta de Oliveira",
   "license": "MIT",
-  "dependencies": {
-    "colors": "^1.4.0",
-    "crypto-js": "^4.0.0",
-    "ip": "^1.1.5",
-    "magic-pump": "0.0.3",
-    "uuid": "^7.0.3"
+  "engines": {
+    "node": ">=18"
+  },
+  "peerDependencies": {
+    "@nestjs/common": ">=9",
+    "@nestjs/core": ">=9",
+    "express": ">=4",
+    "fastify": ">=4"
+  },
+  "peerDependenciesMeta": {
+    "@nestjs/common": {
+      "optional": true
+    },
+    "@nestjs/core": {
+      "optional": true
+    },
+    "express": {
+      "optional": true
+    },
+    "fastify": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.3",
+    "@types/node": "^22.15.30",
+    "express": "^5.1.0",
+    "fastify": "^5.2.1",
+    "tsc-alias": "^1.9.5",
+    "typescript": "^5.8.3",
+    "vitest": "^5.0.1"
   }
 }
