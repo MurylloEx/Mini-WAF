@@ -13,7 +13,7 @@
 
 # Mini WAF
 
-Minimal Web Application Firewall for Node.js (**v3**). Plug it in as middleware/plugin and evaluate each request with typed presets and declarative rules.
+Minimal Web Application Firewall for Node.js (**v1**). Plug it in as middleware/plugin and evaluate each request with typed presets and declarative rules.
 
 Supports **Express**, **Fastify**, and **NestJS** (optional peers — install only the framework you use).
 
