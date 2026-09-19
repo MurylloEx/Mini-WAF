@@ -4,4 +4,3 @@ logs/
 *.log
 .DS_Store
 *.tsbuildinfo
-benchmarks/last-run.json

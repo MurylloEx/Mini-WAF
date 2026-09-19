@@ -559,18 +559,17 @@ function toCachedDecision(result: WafEvaluationResult): CachedDecision {
 
 function fromCachedDecision(
   cached: CachedDecision,
-  rules: readonly WafRule[],
+  rulesById: ReadonlyMap<string, WafRule>,
   resolved: ResolvedWafConfig,
   ctx: WafHttpContext,
   logger: WafLogger,
 ): WafEvaluationResult {
-  const byId = new Map(rules.map((rule) => [rule.id, rule] as const));
   const matchedRule =
     cached.matchedRuleId !== undefined
-      ? byId.get(cached.matchedRuleId)
+      ? rulesById.get(cached.matchedRuleId)
       : undefined;
   const loggedRules = cached.loggedRuleIds.flatMap((id) => {
-    const rule = byId.get(id);
+    const rule = rulesById.get(id);
     return rule !== undefined ? [rule] : [];
   });
 
@@ -623,6 +622,12 @@ export function createWafEngine(
           resolved.performance.decisionCache.ttlMs,
         )
       : undefined;
+  // Rule list is immutable per engine instance — build the id lookup once
+  // instead of re-materializing it on every decision-cache hit.
+  const rulesById =
+    decisionCache !== undefined
+      ? new Map(rules.map((rule) => [rule.id, rule] as const))
+      : undefined;
 
   return {
     rules,
@@ -636,11 +641,11 @@ export function createWafEngine(
         resolved.performance.ruleYieldEvery,
       );
 
-      if (decisionCache !== undefined) {
+      if (decisionCache !== undefined && rulesById !== undefined) {
         const key = requestFingerprint(ctx, FINGERPRINT_BODY_MAX);
         const cached = decisionCache.get(key);
         if (cached !== undefined) {
-          return fromCachedDecision(cached, rules, resolved, ctx, logger);
+          return fromCachedDecision(cached, rulesById, resolved, ctx, logger);
         }
 
         const scan = await scanRulesAsync(ctx, rules, scanOptions);
