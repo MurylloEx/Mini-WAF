@@ -227,7 +227,7 @@ app.listen(3104, '127.0.0.1', () => {
 | `getMethod` | `ctx.method` | Same raw string Node exposes; no case normalization needed (`WafField: 'method'` rules typically use `equals`/`matches` against uppercase HTTP verbs). |
 | `getPath` | `ctx.path` | Koa pre-strips the query string and decodes percent-escapes; avoids re-deriving it with a regex and gets consistent behavior with `path`-scoped presets like `preset-path-traversal`. |
 | `getIp` | `ctx.ip` (→ `normalizeClientIp`) | Koa already understands `app.proxy` / `X-Forwarded-For`; the adapter layer only needs to canonicalize the *form* of the address, not re-derive which hop is "the" client. |
-| `getHeader` | `ctx.get(name) || undefined` | `WafHttpContext.getHeader` is used by `headers.<key>` field resolution (`src/engine/field-resolver.ts`); returning `''` instead of `undefined` would make `{ field: 'headers.x-api-key', matches: /.+/ }`-style presence checks behave incorrectly. |
+| `getHeader` | `ctx.get(name) \|\| undefined` | `WafHttpContext.getHeader` is used by `headers.<key>` field resolution (`src/engine/field-resolver.ts`); returning `''` instead of `undefined` would make `{ field: 'headers.x-api-key', matches: /.+/ }`-style presence checks behave incorrectly. |
 | `getRawBody` | `ctx.request.body` | koa-bodyparser's output location; `bodyToString` (used internally by `createAdapter`) accepts the parsed JSON value directly and serializes it lazily. |
 | `drop` | `ctx.status` / `ctx.body` assignment | Koa's response model is assignment-based rather than `res.end()`-based; mapping the WAF's abstract "end this request with a status + body" onto Koa's idiom is the entire job of a custom adapter. |
 
