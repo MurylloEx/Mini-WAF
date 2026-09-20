@@ -1,33 +1,70 @@
 {
   "name": "mini-waf",
   "version": "1.0.3",
-  "description": "Minimalistic Web Application Firewall for Node.js — declarative rules, immutable engine, Express/Fastify/NestJS adapters.",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "description": "Minimalistic Web Application Firewall for Node.js \u2014 declarative rules, immutable engine, Express/Fastify/NestJS adapters.",
+  "main": "./dist/cjs/index.js",
+  "types": "./dist/cjs/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
+      "import": {
+        "types": "./dist/esm/index.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/index.d.ts",
+        "default": "./dist/cjs/index.js"
+      }
     },
+    "./package.json": "./package.json",
     "./express": {
-      "types": "./dist/express.d.ts",
-      "default": "./dist/express.js"
+      "import": {
+        "types": "./dist/esm/express.d.ts",
+        "default": "./dist/esm/express.js"
+      },
+      "require": {
+        "types": "./dist/cjs/express.d.ts",
+        "default": "./dist/cjs/express.js"
+      }
     },
     "./fastify": {
-      "types": "./dist/fastify.d.ts",
-      "default": "./dist/fastify.js"
+      "import": {
+        "types": "./dist/esm/fastify.d.ts",
+        "default": "./dist/esm/fastify.js"
+      },
+      "require": {
+        "types": "./dist/cjs/fastify.d.ts",
+        "default": "./dist/cjs/fastify.js"
+      }
     },
     "./nestjs": {
-      "types": "./dist/nestjs.d.ts",
-      "default": "./dist/nestjs.js"
+      "import": {
+        "types": "./dist/esm/nestjs.d.ts",
+        "default": "./dist/esm/nestjs.js"
+      },
+      "require": {
+        "types": "./dist/cjs/nestjs.d.ts",
+        "default": "./dist/cjs/nestjs.js"
+      }
     },
     "./adapters": {
-      "types": "./dist/adapters/index.d.ts",
-      "default": "./dist/adapters/index.js"
+      "import": {
+        "types": "./dist/esm/adapters/index.d.ts",
+        "default": "./dist/esm/adapters/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/adapters/index.d.ts",
+        "default": "./dist/cjs/adapters/index.js"
+      }
     },
     "./presets": {
-      "types": "./dist/presets/index.d.ts",
-      "default": "./dist/presets/index.js"
+      "import": {
+        "types": "./dist/esm/presets/index.d.ts",
+        "default": "./dist/esm/presets/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/presets/index.d.ts",
+        "default": "./dist/cjs/presets/index.js"
+      }
     }
   },
   "files": [
@@ -36,7 +73,7 @@
     "README.md"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json && tsc-alias -p tsconfig.json",
+    "build": "npm run clean && tsc -p tsconfig.build.cjs.json && tsc-alias -p tsconfig.build.cjs.json && tsc -p tsconfig.build.esm.json && tsc-alias -p tsconfig.build.esm.json --resolve-full-paths && node scripts/mark-dist-types.mjs",
     "clean": "rm -rf dist",
     "lint": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.tests.json --noEmit",
     "test": "vitest run",
@@ -99,5 +136,26 @@
     "typescript": "^5.8.3",
     "vitepress": "^1.6.4",
     "vitest": "^5.0.1"
-  }
+  },
+  "module": "./dist/esm/index.js",
+  "typesVersions": {
+    "*": {
+      "express": [
+        "./dist/cjs/express.d.ts"
+      ],
+      "fastify": [
+        "./dist/cjs/fastify.d.ts"
+      ],
+      "nestjs": [
+        "./dist/cjs/nestjs.d.ts"
+      ],
+      "adapters": [
+        "./dist/cjs/adapters/index.d.ts"
+      ],
+      "presets": [
+        "./dist/cjs/presets/index.d.ts"
+      ]
+    }
+  },
+  "sideEffects": false
 }

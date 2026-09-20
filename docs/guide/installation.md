@@ -31,6 +31,33 @@ npm install mini-waf @nestjs/common @nestjs/core
 | NestJS | `@nestjs/common` / `@nestjs/core` `>= 9` | `mini-waf/nestjs` |
 | Core / custom adapter | none beyond Node | `mini-waf` |
 
+## Module formats
+
+The package ships **both CommonJS and ES modules**, selected automatically by
+the `exports` map — you do not configure anything:
+
+| Your setup | What you get |
+|------------|--------------|
+| `require('mini-waf')` | `dist/cjs` |
+| `import … from 'mini-waf'` | `dist/esm` (real ESM, tree-shakeable) |
+| Bundler (webpack 5, Vite, Rollup, esbuild, Parcel) | `dist/esm`, with `sideEffects: false` so unused rules are dropped |
+
+Verified against the published tarball for `moduleResolution` set to `node10`,
+`node16`, `nodenext` and `bundler`, including the subpath entrypoints
+(`mini-waf/express`, `mini-waf/presets`, …).
+
+::: tip Bundle size
+Importing only what you use pays off: a bundle pulling in `mini-waf/express`
+with the `sqli` preset is ~37 kB minified, against ~59 kB before ESM output
+existed.
+:::
+
+::: warning Do not mix formats in one process
+Loading both the CJS and the ESM build gives you two independent copies of the
+module. Nothing breaks — the only module-level state is an internal memo cache —
+but a `rateLimitStore` you share by hand must come from a single copy.
+:::
+
 ## Middleware order
 
 **Order matters:** body parser (if any) → WAF → routes.

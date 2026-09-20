@@ -13,7 +13,7 @@ From the repository root:
 npm run integration
 ```
 
-That builds the library (the apps import from `dist/`), installs the
+That builds the library (the apps import from `dist/`, resolved through the package `exports`), installs the
 `integration/` workspace, boots one server per framework, and drives real HTTP
 requests against all of them:
 

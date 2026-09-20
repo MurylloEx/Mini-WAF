@@ -59,7 +59,7 @@ config change against your own rules before deploying it:
 
 ```js
 import { createMockContext } from './benchmarks/lib/mock-context.mjs';
-import { createWafEngine } from './dist/index.js';
+import { createWafEngine } from './dist/esm/index.js';
 
 const engine = createWafEngine({
   presets: ['default'],

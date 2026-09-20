@@ -17,6 +17,8 @@ Minimal Web Application Firewall for Node.js (**v1**). Plug it in as middleware/
 
 Supports **Express**, **Fastify**, and **NestJS** (optional peers — install only the framework you use).
 
+Ships **dual CommonJS + ESM** with per-condition types, so `require`, `import`, and every `moduleResolution` mode (`node10`, `node16`, `nodenext`, `bundler`) resolve — subpaths included. Tree-shakeable (`sideEffects: false`), zero runtime dependencies.
+
 **Documentation:** [https://murylloex.github.io/Mini-WAF/](https://murylloex.github.io/Mini-WAF/) (source in [`docs/`](./docs/); run locally with `npm run docs:dev`)
 
 | | |

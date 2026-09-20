@@ -12,7 +12,7 @@ npm test
 
 | Script | Purpose |
 |--------|---------|
-| `npm run build` | Compile TypeScript to `dist/` (+ `tsc-alias`) |
+| `npm run build` | Compile TypeScript twice — CJS to `dist/cjs`, ESM to `dist/esm` — then write the `type` markers |
 | `npm run lint` | Typecheck library and tests |
 | `npm test` | Vitest unit/integration tests |
 | `npm run test:watch` | Vitest watch mode |

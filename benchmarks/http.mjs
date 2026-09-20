@@ -69,7 +69,7 @@ async function loadExpressAndWaf() {
     process.exit(1);
   }
   const wafMod = await import(
-    pathToFileURL(path.join(root, 'dist', 'express.js')).href
+    pathToFileURL(path.join(root, 'dist', 'esm', 'express.js')).href
   );
   return { express, expressWaf: wafMod.expressWaf };
 }

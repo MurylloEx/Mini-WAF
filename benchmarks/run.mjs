@@ -56,12 +56,12 @@ function largeBody(bytes = 8_192) {
 }
 
 async function loadEngine() {
-  const distIndex = path.join(root, 'dist', 'index.js');
+  const distIndex = path.join(root, 'dist', 'esm', 'index.js');
   try {
     return await import(pathToFileURL(distIndex).href);
   } catch (err) {
     console.error(
-      'Could not load dist/. Run `npm run build` first.\n',
+      'Could not load dist/esm. Run `npm run build` first.\n',
       err.message,
     );
     process.exit(1);
