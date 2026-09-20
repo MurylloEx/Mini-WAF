@@ -18,8 +18,11 @@ import { normalizeClientIp, pickClientIpFromXff } from '@/utils/ip';
 
 /** Minimal Express-like shapes (compatible with Express 4/5). */
 export interface ExpressLikeRequest {
-  readonly method: string;
-  readonly url: string;
+  // Optional because Node's own `IncomingMessage` types them as
+  // `string | undefined`; the adapter already falls back to 'GET' and '/'.
+  // Keeping them required would reject Next.js' `NextApiRequest`.
+  readonly method?: string | undefined;
+  readonly url?: string | undefined;
   readonly originalUrl?: string;
   readonly protocol?: string;
   readonly ip?: string;
@@ -40,10 +43,15 @@ export interface ExpressLikeResponse {
   statusCode?: number;
   readonly headersSent?: boolean;
   readonly writableEnded?: boolean;
-  readonly send?: (body?: string) => ExpressLikeResponse;
+  // These three are declared as returning void because the adapter ignores
+  // their result. TypeScript lets a function returning a value satisfy a
+  // void-returning signature, so Express (returns the response) and
+  // Next.js' NextApiResponse (returns void) both fit.
+  readonly send?: (body?: string) => void;
   readonly end?: (body?: string) => void;
-  readonly set?: (name: string, value: string) => ExpressLikeResponse;
-  readonly header?: (name: string, value: string) => ExpressLikeResponse;
+  readonly set?: (name: string, value: string) => void;
+  readonly header?: (name: string, value: string) => void;
+  // `status` is the exception: the adapter chains `.end()` off its result.
   readonly status?: (code: number) => ExpressLikeResponse;
   readonly setHeader?: (
     name: string,
@@ -80,6 +88,16 @@ function resolveIp(req: ExpressLikeRequest): string {
   );
 }
 
+/**
+ * Adapter mapping Express `req`/`res` onto a {@link WafHttpContext}.
+ *
+ * Use it with `createMiniWaf(...).protect(...)` when you need the WAF outside
+ * the `expressWaf` middleware — otherwise prefer that helper.
+ *
+ * The body is read lazily, so a request that never reaches a `body`-scoped
+ * rule pays nothing, and the client IP is resolved from `req.ip`, the first
+ * `X-Forwarded-For` hop, then the socket address.
+ */
 export function createExpressAdapter(): WafAdapter<
   ExpressLikeRequest,
   ExpressLikeResponse,

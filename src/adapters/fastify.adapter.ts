@@ -11,8 +11,11 @@ import { normalizeClientIp, pickClientIpFromXff } from '@/utils/ip';
 
 /** Minimal Fastify-like shapes. */
 export interface FastifyLikeRequest {
-  readonly method: string;
-  readonly url: string;
+  // Optional for the same reason as ExpressLikeRequest: the underlying Node
+  // request types them as `string | undefined` and the adapter already falls
+  // back to 'GET' and '/'.
+  readonly method?: string | undefined;
+  readonly url?: string | undefined;
   readonly routerPath?: string;
   readonly protocol?: string;
   readonly ip?: string;
@@ -60,6 +63,12 @@ function resolveIp(req: FastifyLikeRequest): string {
   return normalizeClientIp(req.raw?.socket?.remoteAddress ?? '');
 }
 
+/**
+ * Adapter mapping a Fastify request/reply pair onto a {@link WafHttpContext}.
+ *
+ * Use it with `createMiniWaf(...).protect(...)` when you need the WAF outside
+ * the `fastifyWaf` plugin — otherwise prefer that helper.
+ */
 export function createFastifyAdapter(): WafAdapter<
   FastifyLikeRequest,
   FastifyLikeReply
