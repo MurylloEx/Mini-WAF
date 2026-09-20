@@ -43,6 +43,10 @@ export default defineConfig({
         text: 'GitHub',
         link: 'https://github.com/MurylloEx/Mini-WAF',
       },
+      {
+        text: 'Sponsor',
+        link: 'https://opencollective.com/mini-waf',
+      },
     ],
     sidebar: [
       {
@@ -107,7 +111,8 @@ export default defineConfig({
       { icon: 'npm', link: 'https://www.npmjs.com/package/mini-waf' },
     ],
     footer: {
-      message: 'Released under the MIT License.',
+      message:
+        'Released under the MIT License. · <a href="https://opencollective.com/mini-waf">Support Mini-WAF</a>',
       copyright: 'Copyright © Muryllo Pimenta de Oliveira',
     },
     search: {

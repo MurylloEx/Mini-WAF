@@ -161,5 +161,9 @@
   "homepage": "https://murylloex.github.io/Mini-WAF/",
   "bugs": {
     "url": "https://github.com/MurylloEx/Mini-WAF/issues"
+  },
+  "funding": {
+    "type": "opencollective",
+    "url": "https://opencollective.com/mini-waf"
   }
 }

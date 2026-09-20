@@ -55,6 +55,13 @@ keeping duplicates in sync.
 - Keep logging off by default; avoid new mandatory dependencies for the hot path.
 - When changing `src/engine/*` or `src/domain/*` in ways that affect cost, re-run benches and refresh `BENCHMARKS.md`.
 
+## Funding
+
+Mini-WAF is maintained in the open, unpaid. Contributions through
+[Open Collective](https://opencollective.com/mini-waf) fund rule-set curation,
+the documentation site and the maintenance time behind both — and every
+expense is visible on the public ledger.
+
 ## License
 
 MIT — see `LICENSE` in the repository root.

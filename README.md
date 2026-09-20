@@ -9,6 +9,7 @@
   <a href="https://www.npmjs.com/package/mini-waf"><img src="https://badgen.net/npm/types/mini-waf" alt="types"/></a>
   <img src="https://badgen.net/badge/node/%3E=18/green" alt="node"/>
   <a href="https://github.com/MurylloEx"><img src="https://badgen.net/badge/author/MurylloEx/red?icon=label" alt="author"/></a>
+  <a href="https://opencollective.com/mini-waf"><img src="https://badgen.net/opencollective/backers/mini-waf" alt="backers on Open Collective"/></a>
 </p>
 
 # Mini WAF
@@ -526,6 +527,14 @@ npm install
 npm run build
 npm test
 ```
+
+## Support the project
+
+Mini-WAF is MIT-licensed and maintained in the open. If it protects something
+you run in production, you can fund its maintenance through
+[Open Collective](https://opencollective.com/mini-waf) — rule-set curation,
+the documentation site, and the time that keeps both current. All spending is
+public on the ledger.
 
 ## License
 
