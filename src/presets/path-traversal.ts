@@ -1,7 +1,19 @@
 import type { WafRule } from '@/domain/rules';
+import { PAYLOAD_PATH_FIELDS, anyFieldMatches } from '@/presets/fields';
 
 /** Classic `../` and encoded variants (CRS 930100/110 simplified). */
 const PATH_TRAVERSAL = /(\.\.(\/|\\)|\.\.%(2[fF]|5[cC])|\.\.;(?:\/|\\))+/;
+
+/**
+ * Percent-encoded, double-encoded and overlong-UTF-8 traversal (CRS 930100).
+ *
+ * This matters because adapters expose `path` exactly as it arrived on the
+ * wire — still encoded — so `%2e%2e%2f` never reaches {@link PATH_TRAVERSAL}.
+ * On `query`, whose values the framework already decoded, a surviving `%2e%2e`
+ * means the client double-encoded it.
+ */
+const ENCODED_TRAVERSAL =
+  /%(?:25)?2[eE]%(?:25)?2[eE]|\.%(?:25)?2[eE]|%(?:25)?2[eE]\.|%c0%a[ef]|%c1%9c|%e0%80%a[ef]|%u2216|%uff0e/i;
 
 /**
  * Sensitive OS / app paths often probed in LFI (CRS 930120/130 subset).
@@ -21,14 +33,19 @@ export const pathTraversalRules: readonly WafRule[] = [
     action: 'block',
     minLevel: 'low',
     reason: 'Path traversal attempt',
-    when: {
-      anyOf: [
-        { field: 'query', matches: PATH_TRAVERSAL },
-        { field: 'path', matches: PATH_TRAVERSAL },
-        { field: 'body', matches: PATH_TRAVERSAL },
-        { field: 'cookies', matches: PATH_TRAVERSAL },
-      ],
-    },
+    when: anyFieldMatches(PAYLOAD_PATH_FIELDS, PATH_TRAVERSAL, ['..']),
+  },
+  {
+    id: 'preset-path-traversal-encoded',
+    priority: 50,
+    action: 'block',
+    minLevel: 'low',
+    reason: 'Encoded or double-encoded path traversal attempt',
+    when: anyFieldMatches(
+      ['path', 'query', 'cookies'],
+      ENCODED_TRAVERSAL,
+      ['%'],
+    ),
   },
   {
     id: 'preset-lfi-os-files',
@@ -36,14 +53,12 @@ export const pathTraversalRules: readonly WafRule[] = [
     action: 'block',
     minLevel: 'low',
     reason: 'Possible local file inclusion of OS path',
-    when: {
-      anyOf: [
-        { field: 'query', matches: OS_FILE_ACCESS },
-        { field: 'path', matches: OS_FILE_ACCESS },
-        { field: 'body', matches: OS_FILE_ACCESS },
-        { field: 'cookies', matches: OS_FILE_ACCESS },
-      ],
-    },
+    when: anyFieldMatches(PAYLOAD_PATH_FIELDS, OS_FILE_ACCESS, [
+      '/etc/',
+      '.ini',
+      '/proc/',
+      'system32',
+    ]),
   },
   {
     id: 'preset-lfi-restricted-files',
@@ -51,12 +66,16 @@ export const pathTraversalRules: readonly WafRule[] = [
     action: 'block',
     minLevel: 'balanced',
     reason: 'Restricted or sensitive file path probe',
-    when: {
-      anyOf: [
-        { field: 'path', matches: RESTRICTED_PATH },
-        { field: 'query', matches: RESTRICTED_PATH },
-        { field: 'url', matches: RESTRICTED_PATH },
-      ],
-    },
+    when: anyFieldMatches(['path', 'query', 'url'], RESTRICTED_PATH, [
+      '.git',
+      '.env',
+      '.htaccess',
+      '.htpasswd',
+      '.ds_store',
+      'wp-config.php',
+      'web.config',
+      'composer.',
+      'id_rsa',
+    ]),
   },
 ];

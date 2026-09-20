@@ -1,5 +1,6 @@
 import type { WafRule } from '@/domain/rules';
 import { isHostIpLiteral } from '@/utils/ip';
+import { anyFieldMatches } from '@/presets/fields';
 
 /**
  * Derived from OWASP CRS REQUEST-920 / 921 / 943.
@@ -12,25 +13,11 @@ export const protocolRules: readonly WafRule[] = [
     action: 'block',
     minLevel: 'balanced',
     reason: 'Possible HTTP response splitting',
-    when: {
-      anyOf: [
-        {
-          field: 'query',
-          matches:
-            /[\r\n][^0-9A-Za-z_]*?(?:content-(?:type|length)|set-cookie|location)\s*:/i,
-        },
-        {
-          field: 'body',
-          matches:
-            /[\r\n][^0-9A-Za-z_]*?(?:content-(?:type|length)|set-cookie|location)\s*:/i,
-        },
-        {
-          field: 'cookies',
-          matches:
-            /[\r\n][^0-9A-Za-z_]*?(?:content-(?:type|length)|set-cookie|location)\s*:/i,
-        },
-      ],
-    },
+    when: anyFieldMatches(
+      ['query', 'body', 'cookies'],
+      /[\r\n][^0-9A-Za-z_]*?(?:content-(?:type|length)|set-cookie|location)\s*:/i,
+      ['\r', '\n'],
+    ),
   },
   {
     id: 'preset-protocol-request-smuggling',
@@ -38,20 +25,7 @@ export const protocolRules: readonly WafRule[] = [
     action: 'block',
     minLevel: 'balanced',
     reason: 'Possible HTTP request smuggling probe',
-    when: {
-      anyOf: [
-        {
-          field: 'query',
-          matches:
-            /\b(?:get|p(?:ost|ut|atch)|head|options|delete|connect|trace)\s+\S+\s+http\/[0-9]/i,
-        },
-        {
-          field: 'body',
-          matches:
-            /\b(?:get|p(?:ost|ut|atch)|head|options|delete|connect|trace)\s+\S+\s+http\/[0-9]/i,
-        },
-      ],
-    },
+    when: anyFieldMatches(['query', 'body'], /\b(?:get|p(?:ost|ut|atch)|head|options|delete|connect|trace)\s+\S+\s+http\/[0-9]/i, ['http/']),
   },
   {
     id: 'preset-protocol-crlf-path',
@@ -62,6 +36,7 @@ export const protocolRules: readonly WafRule[] = [
     when: {
       field: 'path',
       matches: /[\r\n]/,
+      requires: ['\r', '\n'],
     },
   },
   {
@@ -74,6 +49,7 @@ export const protocolRules: readonly WafRule[] = [
       field: 'query',
       matches:
         /[\r\n]+(?:[\t ]|location|refresh|(?:set-)?cookie|host|via|x-forwarded-(?:for|host|proto))\s*:/i,
+      requires: ['\r', '\n'],
     },
   },
   {
@@ -106,20 +82,10 @@ export const protocolRules: readonly WafRule[] = [
     action: 'block',
     minLevel: 'balanced',
     reason: 'Possible session fixation via cookie HTML attributes',
-    when: {
-      anyOf: [
-        {
-          field: 'query',
-          matches:
-            /\.cookie\b[^;]*;\s*(?:expires|domain)\s*=|\bhttp-equiv\s*=\s*["']?set-cookie\b/i,
-        },
-        {
-          field: 'body',
-          matches:
-            /\.cookie\b[^;]*;\s*(?:expires|domain)\s*=|\bhttp-equiv\s*=\s*["']?set-cookie\b/i,
-        },
-      ],
-    },
+    when: anyFieldMatches(['query', 'body'], /\.cookie\b[^;]*;\s*(?:expires|domain)\s*=|\bhttp-equiv\s*=\s*["']?set-cookie\b/i, [
+      '.cookie',
+      'http-equiv',
+    ]),
   },
   {
     id: 'preset-session-id-in-url',
@@ -131,6 +97,13 @@ export const protocolRules: readonly WafRule[] = [
       field: 'url',
       matches:
         /[?&](?:phpsessid|jsessionid|asp\.net_sessionid|connect\.sid|laravel_session|_session_id|sessionid)=/i,
+      requires: [
+        'sessid',
+        'sessionid',
+        'connect.sid',
+        'laravel_session',
+        '_session_id',
+      ],
     },
   },
   {

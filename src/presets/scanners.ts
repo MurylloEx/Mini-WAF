@@ -1,4 +1,5 @@
 import type { WafRule } from '@/domain/rules';
+import { anyFieldMatches } from '@/presets/fields';
 
 /** Known scanners, exploit kits, DoS heuristics and generic attack probes. */
 export const scannerRules: readonly WafRule[] = [
@@ -32,14 +33,11 @@ export const scannerRules: readonly WafRule[] = [
     action: 'block',
     minLevel: 'balanced',
     reason: 'Null-byte injection attempt',
-    when: {
-      anyOf: [
-        { field: 'query', matches: /\x00/ },
-        { field: 'path', matches: /\x00/ },
-        { field: 'body', matches: /\x00/ },
-        { field: 'headers', matches: /\x00/ },
-      ],
-    },
+    when: anyFieldMatches(
+      ['query', 'path', 'body', 'headers'],
+      /\x00/,
+      ['\x00'],
+    ),
   },
   {
     id: 'preset-data-exposure',
@@ -49,14 +47,20 @@ export const scannerRules: readonly WafRule[] = [
     reason: 'Possible data-exposure probe',
     when: {
       anyOf: [
-        { field: 'path', matches: /phpinfo\.php/i },
+        {
+          field: 'path',
+          matches: /phpinfo\.php/i,
+          requires: ['phpinfo.php'],
+        },
         {
           field: 'query',
           matches: /phpinfo\.php|HTTP_RAW_POST_DATA|HTTP_(?:POS|GE)T_VARS/i,
+          requires: ['phpinfo.php', 'http_raw_post_data', 'http_'],
         },
         {
           field: 'body',
           matches: /HTTP_RAW_POST_DATA|HTTP_(?:POS|GE)T_VARS/i,
+          requires: ['http_raw_post_data', 'http_'],
         },
       ],
     },
@@ -67,22 +71,11 @@ export const scannerRules: readonly WafRule[] = [
     action: 'block',
     minLevel: 'high',
     reason: 'Possible prototype pollution',
-    when: {
-      anyOf: [
-        {
-          field: 'query',
-          matches: /(?:__proto__|constructor\s*\[\s*['"]prototype['"]\s*\])/i,
-        },
-        {
-          field: 'body',
-          matches: /(?:__proto__|constructor\s*\[\s*['"]prototype['"]\s*\])/i,
-        },
-        {
-          field: 'cookies',
-          matches: /(?:__proto__|constructor\s*\[\s*['"]prototype['"]\s*\])/i,
-        },
-      ],
-    },
+    when: anyFieldMatches(
+      ['query', 'body', 'cookies'],
+      /(?:__proto__|constructor\s*\[\s*['"]prototype['"]\s*\])/i,
+      ['__proto__', 'constructor'],
+    ),
   },
   {
     id: 'preset-hex-flood',
@@ -90,12 +83,11 @@ export const scannerRules: readonly WafRule[] = [
     action: 'block',
     minLevel: 'high',
     reason: 'Excessive hexadecimal escape sequence',
-    when: {
-      anyOf: [
-        { field: 'query', matches: /(?:\\x[a-f0-9]{2,4}){25}/i },
-        { field: 'body', matches: /(?:\\x[a-f0-9]{2,4}){25}/i },
-      ],
-    },
+    when: anyFieldMatches(
+      ['query', 'body'],
+      /(?:\\x[a-f0-9]{2,4}){25}/i,
+      ['\\x'],
+    ),
   },
   {
     id: 'preset-excessive-header',
@@ -114,12 +106,11 @@ export const scannerRules: readonly WafRule[] = [
     action: 'block',
     minLevel: 'paranoid',
     reason: 'Shell shebang in request payload',
-    when: {
-      anyOf: [
-        { field: 'query', matches: /#!\/(?:bin|usr\/bin)\// },
-        { field: 'body', matches: /#!\/(?:bin|usr\/bin)\// },
-      ],
-    },
+    when: anyFieldMatches(
+      ['query', 'body'],
+      /#!\/(?:bin|usr\/bin)\//,
+      ['#!/'],
+    ),
   },
   {
     id: 'preset-dos-rate-limit',
