@@ -1,6 +1,6 @@
 {
   "name": "mini-waf",
-  "version": "1.0.4",
+  "version": "1.1.0",
   "description": "Minimalistic Web Application Firewall for Node.js — declarative rules, immutable engine, Express/Fastify/NestJS adapters.",
   "main": "./dist/cjs/index.js",
   "types": "./dist/cjs/index.d.ts",
