@@ -19,9 +19,28 @@ export type HeaderValue = string | string[] | undefined;
 
 export type HeaderMap = Readonly<Record<string, HeaderValue>>;
 
-export type QueryValue = string | string[] | undefined;
+/**
+ * Query values are not always scalars: Express' default `extended` parser (and
+ * Fastify with `querystringParser`) turns `?filter[status]=open` into a nested
+ * object, and `?a[]=1&a[]=2` into an array of them.
+ */
+export type QueryValue =
+  | string
+  | number
+  | boolean
+  | null
+  | undefined
+  | readonly QueryValue[]
+  | QueryObject;
+
+export interface QueryObject {
+  readonly [key: string]: QueryValue;
+}
 
 export type QueryMap = Readonly<Record<string, QueryValue>>;
+
+/** Depth cap so a hostile deeply-nested query cannot drive recursion cost. */
+const MAX_QUERY_DEPTH = 6;
 
 export type CookieMap = Readonly<Record<string, string>>;
 
@@ -36,15 +55,40 @@ export type FilesBag =
   | readonly UploadedFile[]
   | Readonly<Record<string, UploadedFile | readonly UploadedFile[]>>;
 
-/** Flatten a header / query value into a single string for matching. */
-export function scalarToString(value: HeaderValue | QueryValue): string {
-  if (value === undefined) {
+function isQueryArray(value: QueryValue): value is readonly QueryValue[] {
+  return Array.isArray(value);
+}
+
+function flattenQuery(value: QueryValue, depth: number): string {
+  if (value === undefined || value === null) {
     return '';
   }
   if (typeof value === 'string') {
     return value;
   }
-  return value.join(',');
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+  if (depth >= MAX_QUERY_DEPTH) {
+    return '';
+  }
+  if (isQueryArray(value)) {
+    return value.map((item) => flattenQuery(item, depth + 1)).join(',');
+  }
+  return Object.keys(value)
+    .map((key) => `${key}=${flattenQuery(value[key], depth + 1)}`)
+    .join('&');
+}
+
+/**
+ * Flatten a header / query value into a single string for matching.
+ *
+ * Nested objects are rendered back as `key=value&key=value`, which keeps
+ * bracketed parameter **names** visible to rules — that is how
+ * `?user[$ne]=null` reaches the NoSQL operator rule.
+ */
+export function scalarToString(value: HeaderValue | QueryValue): string {
+  return flattenQuery(value, 0);
 }
 
 /** Serialize a JSON-compatible body for payload inspection. */
