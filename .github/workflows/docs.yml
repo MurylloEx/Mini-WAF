@@ -5,20 +5,26 @@ on:
     branches: [master, main]
     paths:
       - 'docs/**'
+      - '.github/assets/**'
       - '.github/workflows/docs.yml'
       - 'package.json'
       - 'package-lock.json'
   workflow_dispatch:
 
+# Required by actions/deploy-pages: `pages` to publish, `id-token` for the
+# OIDC token it exchanges with the Pages service.
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
 
+# Never cancel a running deployment; queue instead.
 concurrency:
   group: pages
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -28,10 +34,19 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Build VitePress
+        # Project Pages are served from /Mini-WAF/, so assets need that base.
         run: DOCS_BASE=/Mini-WAF/ npm run docs:build
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: docs/.vitepress/dist
-          force_orphan: true
+          path: docs/.vitepress/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

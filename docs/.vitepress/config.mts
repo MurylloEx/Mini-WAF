@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitepress';
 
 /**
@@ -10,6 +11,11 @@ import { defineConfig } from 'vitepress';
 const base = process.env.DOCS_BASE || '/';
 
 export default defineConfig({
+  // Images live in .github/assets so the README and the site share one copy.
+  // Vite serves everything in here at the site root.
+  vite: {
+    publicDir: fileURLToPath(new URL('../../.github/assets', import.meta.url)),
+  },
   title: 'Mini-WAF',
   description:
     'Minimal Web Application Firewall for Node.js — declarative rules, immutable engine, Express/Fastify/NestJS adapters.',
@@ -18,7 +24,8 @@ export default defineConfig({
   cleanUrls: true,
   lastUpdated: true,
   head: [
-    ['link', { rel: 'icon', href: `${base}mini-waf-logo.png`, type: 'image/png' }],
+    ['link', { rel: 'icon', href: `${base}mini-waf-icon.png`, type: 'image/png' }],
+    ['link', { rel: 'apple-touch-icon', href: `${base}mini-waf-icon.png` }],
     ['meta', { name: 'theme-color', content: '#0a0a0a' }],
   ],
   themeConfig: {
@@ -27,7 +34,6 @@ export default defineConfig({
     nav: [
       { text: 'Guide', link: '/guide/introduction' },
       { text: 'API', link: '/guide/api' },
-      { text: 'Deploy', link: '/guide/deploy' },
       {
         text: 'npm',
         link: 'https://www.npmjs.com/package/mini-waf',
@@ -88,7 +94,6 @@ export default defineConfig({
           { text: 'Configuration', link: '/guide/configuration' },
           { text: 'API reference', link: '/guide/api' },
           { text: 'Contributing', link: '/guide/contributing' },
-          { text: 'Deploy to GitHub Pages', link: '/guide/deploy' },
         ],
       },
     ],

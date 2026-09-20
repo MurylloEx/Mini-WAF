@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./mini-waf-logo.png" alt="Mini-WAF — Web Application Firewall" width="420"/>
+  <img src="./.github/assets/mini-waf-logo.png" alt="Mini-WAF — Web Application Firewall" width="420"/>
 </p>
 
 <p align="center">

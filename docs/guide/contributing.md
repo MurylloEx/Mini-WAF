@@ -24,6 +24,19 @@ npm test
 | `npm run docs:build` | Build static docs |
 | `npm run docs:preview` | Preview the docs build |
 
+## Docs deployment
+
+Pushing to `master` runs [`.github/workflows/docs.yml`](https://github.com/MurylloEx/Mini-WAF/blob/master/.github/workflows/docs.yml),
+which builds the site with `DOCS_BASE=/Mini-WAF/` and publishes it straight to
+GitHub Pages through `actions/deploy-pages`. There is no `gh-pages` branch to
+maintain, and nothing to do by hand.
+
+## Images
+
+Logo and icon live in `.github/assets/`, which VitePress serves as its public
+directory — the README and the site share one copy of each file rather than
+keeping duplicates in sync.
+
 ## Layout
 
 - `src/domain` — types, levels, serializable DSL
