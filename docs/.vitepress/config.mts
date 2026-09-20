@@ -47,20 +47,39 @@ export default defineConfig({
         ],
       },
       {
-        text: 'Core',
+        text: 'Core concepts',
         items: [
-          { text: 'Core concepts', link: '/guide/concepts' },
+          { text: 'Overview', link: '/guide/concepts' },
+          { text: 'Conditions & matchers', link: '/guide/conditions' },
+          { text: 'Protection levels', link: '/guide/protection-levels' },
+        ],
+      },
+      {
+        text: 'Rules',
+        items: [
           { text: 'Presets', link: '/guide/presets' },
           { text: 'Custom rules', link: '/guide/custom-rules' },
-          { text: 'Logging', link: '/guide/logging' },
-          { text: 'Performance & caching', link: '/guide/performance' },
+          { text: 'JSON rules', link: '/guide/json-rules' },
         ],
       },
       {
         text: 'Integrations',
         items: [
-          { text: 'Framework integrations', link: '/guide/integrations' },
-          { text: 'Custom adapters', link: '/guide/custom-adapters' },
+          { text: 'Overview', link: '/guide/integrations/' },
+          { text: 'Express', link: '/guide/integrations/express' },
+          { text: 'Fastify', link: '/guide/integrations/fastify' },
+          { text: 'NestJS', link: '/guide/integrations/nestjs' },
+          { text: 'Custom adapters', link: '/guide/integrations/custom-adapters' },
+          { text: 'Testing', link: '/guide/integrations/testing' },
+        ],
+      },
+      {
+        text: 'Operations',
+        items: [
+          { text: 'Logging', link: '/guide/logging' },
+          { text: 'Performance & caching', link: '/guide/performance' },
+          { text: 'Benchmarking', link: '/guide/benchmarking' },
+          { text: 'Security notes', link: '/guide/security' },
         ],
       },
       {
@@ -68,7 +87,6 @@ export default defineConfig({
         items: [
           { text: 'Configuration', link: '/guide/configuration' },
           { text: 'API reference', link: '/guide/api' },
-          { text: 'Security notes', link: '/guide/security' },
           { text: 'Contributing', link: '/guide/contributing' },
           { text: 'Deploy to GitHub Pages', link: '/guide/deploy' },
         ],

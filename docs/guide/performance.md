@@ -2,25 +2,14 @@
 
 Mini-WAF includes optional knobs to bound CPU and memory without external cache libraries. Full tables, methodology, and caveats live in the repository's [`BENCHMARKS.md`](https://github.com/MurylloEx/Mini-WAF/blob/main/BENCHMARKS.md).
 
-## Snapshot (latest documented run)
+## How much does it cost?
 
-Same machine as `BENCHMARKS.md` (Ryzen 7 5700X3D, Node 24). Always re-run locally.
+At `balanced` with the `default` pack, a clean request costs roughly **12 µs**
+of engine time; at `low`, about **7 µs**. End to end on a real Express server
+that is around **20% fewer req/s** on tiny GETs.
 
-| Case | Result |
-|------|--------|
-| Engine baseline (`A0`, 0 rules) | ~422k ops/s, p50 ~1.1 µs |
-| Balanced clean allow (`A1`, 25 rules) | ~113k ops/s, p50 ~6.8 µs |
-| + `decisionCache` hits (`A2`) | ~411k ops/s, p50 ~2.0 µs |
-| ~8KB body (`A3`) | ~12k ops/s, p50 ~76 µs |
-| Express tiny GET, WAF on vs off (`B0`→`B1`) | ~−16% req/s, ~+23% p50 |
-
-Artifacts: `benchmarks/last-run.json`, `benchmarks/last-http-run.json`.
-
-```bash
-npm run bench
-npm run bench:http
-npm run bench:compare
-```
+Numbers, methodology and how to measure your own set-up live in
+[Benchmarking](/guide/benchmarking).
 
 ## Configuration knobs
 
@@ -124,60 +113,29 @@ const waf = createMiniWaf(
 - After the first matching `block`, later pure `block` rules (no `rateLimit` in their condition tree) are skipped. `allow`, `log`, and rate-limit side-effect rules still run.
 - Prefer specific fields (`query.id`, `headers.user-agent`) over bags (`query`, `headers`, `cookies`). Bags OR across every value and amplify matcher cost.
 - Static `includes` needles are lowercased once at rule load (`normalizeRules`); haystacks are memoized per request via `FieldResolveOptions.memoLower` so a field used by multiple `includes` rules is only lowercased once per request.
+- **`requires` is the biggest lever on large payloads.** A condition that declares it is gated by an `indexOf` scan before its regex runs, over the same memoized lowercased view. On an 8 KB body this is what separates a handful of substring scans from dozens of full regex passes; most preset rules ship one. See [Custom rules](/guide/custom-rules) for how to write a correct list — an incomplete one is a silent detection gap, not a slowdown.
+
+### Cost scales with rules × field values
+
+A rule costs one matcher run **per candidate value of each field it targets**.
+`{ anyOf: [{ field: 'query' }, { field: 'body' }] }` over a query with 5
+parameters is 6 runs, not 2. Two consequences:
+
+- Raising `level` raises cost roughly linearly. With `presets: ['default']` the
+  active rule count is 19 / 45 / 61 / 67 for `low` / `balanced` / `high` /
+  `paranoid` — pick the lowest level that meets your threat model.
+- `decisionCache` sidesteps the whole scan on a fingerprint hit, and is by far
+  the cheapest win for traffic with repeated shapes (it is disabled
+  automatically while a `rateLimit` rule is active).
 
 ## Regex caveats
 
 Node has no sync RegExp timeout and no built-in RE2. Catastrophic backtracking on long strings is mitigated by `maxFieldLength` truncation before `matches`. Avoid nested quantifiers on attacker-controlled input. For hard guarantees, run matching in a worker with a wall-clock budget or use a linear-time engine outside this library.
 
-## A minimal benchmark harness (inspired by `benchmarks/run.mjs`)
-
-The real benchmark suite (`benchmarks/run.mjs`) builds against `dist/` (run `npm run build` first) and uses a `createMockContext` helper (`benchmarks/lib/mock-context.mjs`) that implements the full `WafHttpContext` surface without any HTTP server — useful when you want to A/B a config change against your own rule set before deploying it.
-
-```js
-import { createMockContext } from './benchmarks/lib/mock-context.mjs';
-import { createWafEngine } from './dist/index.js';
-
-const engine = createWafEngine({
-  presets: ['default'],
-  level: 'balanced',
-  ruleYieldEvery: 0, // disable yielding for a clean, single-threaded timing loop
-});
-
-function benchAllowPath(iterations = 20_000) {
-  const { ctx } = createMockContext({
-    method: 'GET',
-    url: '/search?q=hello',
-    headers: { 'user-agent': 'Mozilla/5.0 (compatible; BenchBot/1.0)' },
-  });
-
-  // Warm up the JIT / megamorphic call sites before timing.
-  for (let i = 0; i < 1_000; i += 1) {
-    void engine.handle(ctx);
-  }
-
-  const start = performance.now();
-  for (let i = 0; i < iterations; i += 1) {
-    void engine.handle(ctx);
-  }
-  const elapsedMs = performance.now() - start;
-
-  console.log(`${iterations} clean allows in ${elapsedMs.toFixed(2)}ms`);
-  console.log(`~${Math.round((iterations / elapsedMs) * 1_000)} ops/s`);
-}
-
-benchAllowPath();
-```
-
-For the authoritative numbers (throughput, p50/p95/p99 latency, methodology, and machine specs), run the real suite:
-
-```bash
-npm run bench          # benchmarks/run.mjs → benchmarks/last-run.json
-npm run bench:http     # benchmarks/http.mjs → benchmarks/last-http-run.json
-npm run bench:compare  # both, side by side
-```
-
 ## Practical tips
 
 - Production defaults (`maxFieldLength: 8192`, `ruleYieldEvery: 32`) are a good starting point.
+- Add `requires` to every custom regex rule whose pattern has a fixed literal.
 - Disable `preset-dos-rate-limit` only if you rate-limit elsewhere **and** you want `decisionCache` to be eligible.
 - Narrow `presets` and pick the lowest `level` that meets your threat model — see [Security notes](/guide/security).
+- Measure before and after any of the above: [Benchmarking](/guide/benchmarking).

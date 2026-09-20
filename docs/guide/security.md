@@ -13,6 +13,21 @@ Mini-WAF reduces common probe and injection noise at the edge of your Node app. 
 
 Dial coverage with **`level` first**, then **narrow `presets`**, then **`disabledRuleIds` / early `allow` rules** for known-good routes.
 
+## Known coverage limits
+
+Read these before assuming a payload class is covered:
+
+- **Query parameter *names* are not scanned** — only values. With a non-nesting
+  query parser (Express 5's default) `?user[$ne]=null` keeps the payload in the
+  key and is not seen. On Express 5, `app.set('query parser', 'extended')`
+  restores the nested-object shape the engine flattens and inspects; Express 4
+  already does this by default.
+- **Response bodies are never inspected.** This is a request-side WAF.
+- **There is no generic decoding pass.** Rules match what the framework hands
+  over, plus the encoded variants rules explicitly anticipate (traversal, XSS
+  tags). A payload wrapped in an encoding no rule covers will pass.
+- **No cross-request correlation** beyond the per-IP rate limit.
+
 ## False positives
 
 Common sources:
@@ -20,6 +35,10 @@ Common sources:
 - Broad UA / XSS / generic-tag rules at `high` / `paranoid`
 - Bag fields (`query`, `body`) matching substrings that appear in legitimate content
 - Admin or CMS paths that look like traversal or SSI
+- `preset-rfi-remote-url` on endpoints that legitimately take a remote `.txt` /
+  `.php` URL as a parameter
+- `preset-sqli-blind` at `high` on reporting endpoints that accept `ORDER BY 1`
+  or `CASE WHEN` fragments
 
 Mitigations:
 

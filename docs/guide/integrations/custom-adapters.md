@@ -1,6 +1,14 @@
 # Custom adapters
 
-For frameworks without a built-in integration, map your request/response onto the engine with `createAdapter` and call `createMiniWaf(...).protect(...)`. This page walks through the full `WafHttpContext` / `WafAdapter` shape and a complete Koa adapter, field by field.
+For frameworks without a built-in integration — Koa, Hapi, a raw `node:http`
+server, a serverless handler — map your request/response onto the engine with
+`createAdapter` and call `createMiniWaf(...).protect(...)`.
+
+This page walks through the full `WafHttpContext` / `WafAdapter` shape and a
+complete Koa adapter, field by field. Everything the built-in
+[Express](/guide/integrations/express), [Fastify](/guide/integrations/fastify)
+and [NestJS](/guide/integrations/nestjs) integrations do, they do through this
+same interface.
 
 ## APIs
 
@@ -254,3 +262,19 @@ export async function runWithAdapter<TRequest, TResponse, TNext>(
 ```
 
 Use it directly when you need both the raw `WafHttpContext` (e.g. to read `ctx.getIp()` for your own logging) and the `WafEvaluationResult` in the same call, instead of going through `.protect(...)` which only returns the result.
+
+## Checklist before you ship it
+
+A custom adapter is where integration bugs hide. Verify each of these against a
+real server — [Testing your integration](/guide/integrations/testing) has a
+runnable harness, and the repository's `integration/koa/` app is a working
+reference:
+
+| Check | Why |
+|-------|-----|
+| `getRawBody()` returns the parsed payload | Otherwise every body rule silently passes |
+| `drop()` actually ends the response | Otherwise a "blocked" request still reaches your handler |
+| `isBlocked()` reflects `drop()` | The engine uses it to decide whether to continue |
+| `getIp()` is the client, not the proxy | Rate-limit buckets collapse onto one key otherwise |
+| `getPath()` is the raw, still-encoded path | Encoded-traversal rules depend on it |
+| Header lookups are case-insensitive | `headers.user-agent` must find `User-Agent` |

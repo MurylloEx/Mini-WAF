@@ -19,6 +19,13 @@ Supports **Express**, **Fastify**, and **NestJS** (optional peers — install on
 
 **Documentation:** [https://murylloex.github.io/Mini-WAF/](https://murylloex.github.io/Mini-WAF/) (source in [`docs/`](./docs/); run locally with `npm run docs:dev`)
 
+| | |
+|---|---|
+| **Get running** | [Quick start](https://murylloex.github.io/Mini-WAF/guide/quick-start) · [Express](https://murylloex.github.io/Mini-WAF/guide/integrations/express) · [Fastify](https://murylloex.github.io/Mini-WAF/guide/integrations/fastify) · [NestJS](https://murylloex.github.io/Mini-WAF/guide/integrations/nestjs) · [Custom adapters](https://murylloex.github.io/Mini-WAF/guide/integrations/custom-adapters) |
+| **Understand it** | [Core concepts](https://murylloex.github.io/Mini-WAF/guide/concepts) · [Conditions & matchers](https://murylloex.github.io/Mini-WAF/guide/conditions) · [Protection levels](https://murylloex.github.io/Mini-WAF/guide/protection-levels) |
+| **Write rules** | [Presets](https://murylloex.github.io/Mini-WAF/guide/presets) · [Custom rules](https://murylloex.github.io/Mini-WAF/guide/custom-rules) · [JSON rules](https://murylloex.github.io/Mini-WAF/guide/json-rules) |
+| **Operate it** | [Logging](https://murylloex.github.io/Mini-WAF/guide/logging) · [Performance](https://murylloex.github.io/Mini-WAF/guide/performance) · [Benchmarking](https://murylloex.github.io/Mini-WAF/guide/benchmarking) · [Security notes](https://murylloex.github.io/Mini-WAF/guide/security) |
+
 ## Install
 
 ```bash
@@ -223,12 +230,12 @@ Each rule (preset or custom) may declare `minLevel`. It only applies when the co
 
 Custom rules **without** `minLevel` are treated as `low` (active at any level).
 
-| Level | Includes | Typical use | ≈ CRS PL |
-|-------|----------|-------------|----------|
-| `low` | Obvious scanners (UA), classic SQLi, OS path/LFI, RFI / PHP RCE, strong shell RCE, SSRF metadata | APIs sensitive to false positives | PL1 (core) |
-| `balanced` (default) | `low` + XSS, null-byte, uploads, DoS rate-limit, protocol splitting/smuggling, SSTI, session fixation HTML | General production | PL1–PL2 |
-| `high` | `balanced` + SSI, hex flood, pollution, advanced SQLi, CL+TE, shell `$()`, session ID in URL | Under attack / broader coverage | PL2 |
-| `paranoid` | `high` + broad UAs, generic tags, empty UA, shebang, oversized headers | Max coverage; more FPs | PL3–PL4 |
+| Level | Rules (`default`) | Includes | Typical use | ≈ CRS PL |
+|-------|-------------------|----------|-------------|----------|
+| `low` | 19 | Obvious scanners (UA), classic SQLi + DBMS primitives, plain & encoded traversal / LFI, stream-wrapper RFI, PHP RCE, shell RCE, JNDI/Log4Shell, reverse shells, fetch-and-exec, Windows LOLBins, SSRF metadata | APIs sensitive to false positives | PL1 (core) |
+| `balanced` (default) | 45 | `low` + XSS (incl. encoded tags, `data:` URIs, attribute vectors), SQLi tautologies & `SELECT … FROM`, NoSQL operators, uploads & extension bypass, remote-URL RFI, SSTI, Node/lang exec, deserialization, null-byte, DoS rate-limit, protocol splitting/smuggling | General production | PL1–PL2 |
+| `high` | 61 | `balanced` + SSI, hex flood, prototype pollution, advanced & blind SQLi, XSS JS primitives, CL+TE, shell `$()`/`${IFS}`, session ID in URL | Under attack / broader coverage | PL2 |
+| `paranoid` | 67 | `high` + broad UAs, generic HTML tags, empty UA, shebang, oversized headers | Max coverage; more FPs | PL3–PL4 |
 
 ```ts
 expressWaf({
@@ -255,15 +262,18 @@ expressWaf({
 
 Individual presets: `'sqli' | 'xss' | 'scanners' | 'path-traversal' | 'rfi' | 'rce' | 'protocol' | 'default'`.
 
-| Preset | Focus (CRS-derived) |
-|--------|---------------------|
-| `sqli` | REQUEST-942 |
-| `xss` | REQUEST-941 (+ SSI) |
-| `scanners` | REQUEST-913 / 912 (UA, DoS rate) |
-| `path-traversal` | REQUEST-930 (LFI / traversal) |
-| `rfi` | REQUEST-931 (+ PHP RCE / upload) |
-| `rce` | REQUEST-932 / 934 (shell, SSTI, SSRF metadata) |
-| `protocol` | REQUEST-920 / 921 / 943 |
+| Preset | Rules | Focus (CRS-derived) |
+|--------|-------|---------------------|
+| `sqli` | 14 | REQUEST-942 — classic, tautology, DBMS primitives, blind, NoSQL operators |
+| `xss` | 11 | REQUEST-941 (+ SSI) — tags, encoded tags, `data:` URIs, attribute vectors, JS primitives |
+| `scanners` | 9 | REQUEST-913 / 912 (UA, DoS rate) |
+| `path-traversal` | 4 | REQUEST-930 — plain and encoded traversal, LFI |
+| `rfi` | 6 | REQUEST-931 / 933 — stream wrappers, remote script include, PHP RCE, uploads |
+| `rce` | 14 | REQUEST-932 / 934 — shell, JNDI/Log4Shell, reverse shells, LOLBins, SSTI, deserialization |
+| `protocol` | 9 | REQUEST-920 / 921 / 943 |
+
+The per-rule breakdown, with what each id catches, is in
+[the presets guide](https://murylloex.github.io/Mini-WAF/guide/presets).
 
 Each preset rule already has a `minLevel`; your config `level` decides which ones run.
 
@@ -379,8 +389,35 @@ const rules: WafRule[] = [
 - `matches`: `string` \| `RegExp` \| `readonly string[]` (runs on truncated field values when `maxFieldLength` > 0)
 - `equals`: exact equality
 - `includes`: case-insensitive substring (needle lowercased at rule load)
+- `requires`: literal prefilter — see below
 - `rateLimit: { max, windowMs, keyPrefix? }`
 - Compounds: `{ all: [...] }`, `{ anyOf: [...] }`, `{ not: ... }`
+
+#### `requires` — the literal prefilter
+
+A value is only handed to `matches` when it contains one of these substrings
+(case-insensitive). An `indexOf` scan is far cheaper than a regex pass over a
+large body, and the lowercased view of each field is computed once per request
+and shared by every rule, so this is how the presets keep a 67-rule pack cheap:
+
+```ts
+{
+  id: 'block-jndi',
+  action: 'block',
+  reason: 'Log4Shell probe',
+  when: {
+    field: 'body',
+    matches: /\$\{\s*(?:jndi|ctx|env|sys)\s*:/i,
+    requires: ['${'], // every payload this regex can match contains "${"
+  },
+}
+```
+
+> **The list must be complete.** If a payload the pattern would match contains
+> none of the literals, the rule silently misses it. Leave `requires` out when
+> you are not sure, or when the pattern has no fixed literal (`/^\d+$/`).
+
+It works in JSON rules too: `"requires": ["${"]`.
 
 ### Actions
 
@@ -473,6 +510,10 @@ The same `rules` / `presets` / `level` work with Fastify (`config`) and Nest (`M
 | Query/headers OK, body "empty" in WAF | `req.body` not populated yet | Check middleware order; in a custom adapter, `getRawBody` must read the already-parsed or raw payload |
 | Health route blocked | Broad preset/scanner rule | Whitelist: `{ id: 'allow-health', priority: 1, action: 'allow', when: { field: 'path', equals: '/health' } }` |
 | Nest does not block / allow | Middleware not applied | `consumer.apply(MiniWafMiddleware).forRoutes('*')` in `NestModule` |
+| Requests carrying a remote URL get 403 | `preset-rfi-remote-url` fires on URLs ending in `.php`, `.txt`, `.jsp`… or a trailing `?` | `disabledRuleIds: ['preset-rfi-remote-url']`, or move the URL to the request body |
+| A sort/report endpoint gets 403 at `high` | `preset-sqli-blind` (`ORDER BY 1`, `CASE WHEN`) | Stay on `balanced`, or `disabledRuleIds: ['preset-sqli-blind']` |
+| `?user[$ne]=null` is not blocked | Query **names** are not scanned, and Express 5's default parser keeps the payload in the key | `app.set('query parser', 'extended')` so the nested object is flattened and inspected |
+| Custom rule stopped matching | An incomplete `requires` list is filtering the value out before `matches` runs | Remove `requires`, or add every literal your pattern can match on |
 
 ---
 

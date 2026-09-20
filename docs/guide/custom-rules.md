@@ -86,6 +86,45 @@ const blockSsrfToMetadataService: WafRule = {
 
 The built-in `preset-rce-ssrf-metadata` rule (part of the `rce` pack) covers the same class of attack more broadly — write custom regex rules like this one when you need a narrower or app-specific variant (e.g. matching your own proxy/webhook parameter names).
 
+### Making a regex rule cheap with `requires`
+
+Add `requires` whenever every payload your pattern can match necessarily
+contains a fixed substring. The value is skipped with an `indexOf` scan before
+the regex runs, and the lowercased field view is shared across all rules:
+
+```ts
+const blockSsrfToMetadataServiceFast: WafRule = {
+  ...blockSsrfToMetadataService,
+  id: 'block-ssrf-metadata-custom-fast',
+  when: {
+    anyOf: [
+      {
+        field: 'query.url',
+        matches: /169\.254\.169\.254|metadata\.google\.internal/i,
+        // Both alternatives are literals, so the list is provably complete.
+        requires: ['169.254', 'metadata.google'],
+      },
+      {
+        field: 'body',
+        matches: /169\.254\.169\.254|metadata\.google\.internal/i,
+        requires: ['169.254', 'metadata.google'],
+      },
+    ],
+  },
+};
+```
+
+The gain grows with the payload: on an 8 KB body a prefiltered rule costs a
+substring scan instead of a full regex pass. Every preset rule whose pattern
+allows it ships one.
+
+::: warning The list must be exhaustive
+`requires` is not a hint — a value containing none of the literals is **never**
+matched. If your pattern can match something the list does not cover, the rule
+silently stops detecting it. Drop `requires` when the pattern has no fixed
+literal, e.g. `/^\d{3,}$/` or a predicate function.
+:::
+
 ## 4. Rate-limit rule
 
 `rateLimit` turns a `FieldCondition` into a stateful counter instead of a pure predicate. The condition **matches once the limit is exceeded**, not on every hit:
@@ -137,140 +176,53 @@ const rateLimitLoginRoute: WafRule = {
 
 Because `all` evaluates children in order and short-circuits on the first non-match, the rate-limit hit is only recorded for requests that already matched `path` and `method` — non-login traffic never touches this counter. Counters live in a single shared `RateLimitStore` per engine instance, capped by `maxRateLimitKeys` (default `10000`, LRU-evicted) — see [Performance & caching](/guide/performance). Any active rule using `rateLimit` also **disables the optional `decisionCache`** automatically (`rulesHaveRateLimit`, `src/engine/condition-utils.ts`), since a cached "allow" would stop the counter from advancing.
 
-## 5. JSON-serializable rules loaded at runtime
+## 5. Composing with presets
 
-`RegExp` instances and function predicates cannot round-trip through JSON. The serializable DSL (`src/domain/serializable.ts`) replaces `RegExp` with `{ pattern, flags? }` and is compiled with `loadRules` / `parseRulesFromJson` (`src/engine/load-rules.ts`), which validates every field and throws a `RuleParseError` (with a JSON-path-like `path`, e.g. `rules[0].when.matches.pattern`) on malformed input.
+Custom rules are merged **after** resolved presets, into the same id namespace
+that `enabledRuleIds` / `disabledRuleIds` operate on — so pick ids that will not
+collide with `preset-*`.
 
-`rules.json`:
-
-```json
-{
-  "rules": [
-    {
-      "id": "block-sqli-query-id",
-      "when": { "field": "query.id", "matches": { "pattern": "('|OR\\s+1=1)", "flags": "i" } },
-      "action": "block",
-      "reason": "Possible SQL injection in query.id"
-    },
-    {
-      "id": "block-known-bad-referrers",
-      "when": { "field": "headers.referer", "matches": ["http://evil.example", "http://phish.example"] },
-      "action": "block",
-      "reason": "Known malicious referrer"
-    },
-    {
-      "id": "rate-limit-login-attempts",
-      "when": { "field": "ip", "rateLimit": { "max": 10, "windowMs": 60000, "keyPrefix": "login-attempts" } },
-      "action": "block",
-      "reason": "Too many login attempts",
-      "minLevel": "low"
-    }
-  ]
-}
-```
-
-Loading it:
-
-```ts
-import { readFileSync } from 'node:fs';
-import { parseRulesFromJson, RuleParseError, createMiniWaf } from 'mini-waf';
-
-let rules;
-try {
-  rules = parseRulesFromJson(readFileSync('./rules.json', 'utf8'));
-} catch (err) {
-  if (err instanceof RuleParseError) {
-    // `err.path` pinpoints exactly which key failed, e.g. "rules[2].when.rateLimit.max".
-    console.error(`Invalid rule at ${err.path}: ${err.message}`);
-    process.exit(1);
-  }
-  throw err;
-}
-
-const waf = createMiniWaf({ presets: ['default'], rules });
-```
-
-`loadRules(value)` accepts either a top-level JSON array of rules or `{ "rules": [...] }` — both forms are shown implicitly above (the top-level object form is what `rules.json` uses). Top-level `matches` accepts a plain string (exact equality), a string array (OR list), or `{ pattern, flags? }` (compiled via `new RegExp(pattern, flags)` — invalid flags or an invalid pattern also throw `RuleParseError`).
-
-## 6. Protection-level gating (`minLevel`)
-
-Every rule (preset or custom) declares (or inherits) a `minLevel`. It only runs when the configured `WafConfig.level` is **at least** that strict — `low < balanced < high < paranoid` (`isLevelActive`, `src/domain/levels.ts`). Rules without an explicit `minLevel` default to `'low'`, i.e. always active regardless of configured level.
-
-```ts
-import { expressWaf } from 'mini-waf/express';
-
-app.use(
-  expressWaf({
-    level: 'high',
-    presets: ['default'],
-    rules: [
-      {
-        id: 'strict-debug-flag',
-        // Only enforced when level is 'high' or 'paranoid'; silently inert
-        // at 'low'/'balanced' so staging (level: 'balanced') can keep
-        // using ?debug=1 while production (level: 'high') cannot.
-        minLevel: 'high',
-        action: 'block',
-        when: { field: 'query.debug', equals: '1' },
-        reason: 'Debug flag blocked at high+ protection level',
-      },
-      {
-        id: 'always-block-internal-header-spoof',
-        // No minLevel — defaults to 'low', so this runs at every level.
-        action: 'block',
-        when: { field: 'headers.x-internal-auth', matches: /^.+$/ },
-        reason: 'Client attempted to spoof an internal-only header',
-      },
-    ],
-  }),
-);
-```
-
-## 7. Enabling / disabling rules by id
-
-After presets and custom rules are merged, `buildRuleList` (`src/engine/engine.ts`) applies, **in this exact order**: (1) resolve presets + custom `rules`, (2) filter by `level`/`minLevel`, (3) apply `enabledRuleIds` if non-empty (allowlist), (4) apply `disabledRuleIds`, (5) drop `enabled: false` and sort by `priority`.
-
-```ts
-createMiniWaf({
-  presets: ['default'],
-  level: 'balanced',
-  // Turn off a specific preset rule that produces false positives for this app...
-  disabledRuleIds: ['preset-scanners-ua-broad', 'preset-xss-generic-tags'],
-  rules: [
-    {
-      // ...and add a targeted allowlist rule instead, running first
-      // (priority 1) so 'allow' short-circuits before any preset scans.
-      id: 'allow-health',
-      priority: 1,
-      action: 'allow',
-      when: { field: 'path', equals: '/health' },
-    },
-    {
-      id: 'log-suspicious-referrer',
-      // `action: 'log'` never blocks — it only collects into
-      // WafEvaluationResult.loggedRules and, if logging is enabled at
-      // level 'info'+, is emitted via WafLogger.audit(ctx, rule).
-      action: 'log',
-      when: { field: 'headers.referer', includes: 'pastebin' },
-      reason: 'Referrer includes pastebin — audit only, not blocked',
-    },
-  ],
-});
-```
-
-`enabledRuleIds` is an allowlist: when present **and non-empty**, only listed ids survive; an empty array or `undefined` is a no-op (does not lock you out of every rule by accident). Prefer `disabledRuleIds` for "keep everything except X" and `enabledRuleIds` for "keep only X" — mixing both is legal (allowlist applies first, then the denylist further narrows it).
-
-## Composing with presets
-
-Custom rules are merged **after** resolved presets (same id space for enable/disable filters, so pick ids that will not collide with `preset-*`). Use `priority` so `allow` / early blocks run when you intend — presets mostly use priorities in the 40-90 range, so a `priority: 1` custom `allow` rule reliably runs first.
+Presets mostly use priorities in the 40–90 range, so a `priority: 1` custom
+`allow` rule reliably runs first:
 
 ```ts
 createMiniWaf({
   presets: ['sqli', 'xss'],
   level: 'balanced',
   disabledRuleIds: ['preset-xss-generic-tags'],
-  rules: [/* your rules from sections 1-6 above */],
+  rules: [
+    {
+      id: 'allow-health',
+      priority: 1,
+      action: 'allow',
+      when: { field: 'path', equals: '/health' },
+    },
+    // ...your rules from the sections above
+  ],
 });
 ```
 
-See [Presets](/guide/presets) for the full list of built-in rule ids available for `enabledRuleIds`/`disabledRuleIds`, and [Core concepts](/guide/concepts) for how `WafField`, matchers, and actions fit together.
+## Testing what you wrote
+
+Two assertions catch most regressions:
+
+```ts
+// 1. The attack is blocked — by the rule you think.
+expect(result.matchedRule?.id).toBe('block-unauthenticated-admin-probe');
+
+// 2. Real traffic still passes.
+expect(`${result.decision}:${result.matchedRule?.id ?? ''}`).toBe('allow:');
+```
+
+The second one matters more. A rule that over-blocks is how a WAF gets turned
+off in production — build a corpus of query strings and bodies your app
+actually receives and assert them at one level *above* what you deploy. See
+[Testing your integration](/guide/integrations/testing) for a runnable setup.
+
+## Where to go next
+
+- [Protection levels](/guide/protection-levels) — `minLevel` gating and enabling
+  or disabling rules by id
+- [JSON rules](/guide/json-rules) — ship the same DSL as configuration
+- [Presets](/guide/presets) — every built-in rule id, and what it catches
+- [Conditions & matchers](/guide/conditions) — the full `when` reference

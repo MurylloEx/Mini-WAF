@@ -8,7 +8,7 @@
     "keepAlive": true,
     "node": "v24.15.0",
     "cpu": "16× AMD Ryzen 7 5700X3D 8-Core Processor",
-    "timestamp": "2026-09-19T18:51:41.965Z",
+    "timestamp": "2026-09-20T02:05:51.206Z",
     "waf": {
       "presets": [
         "default"
@@ -29,11 +29,11 @@
       "completed": 50000,
       "errors": 0,
       "errorRate": 0,
-      "wallMs": 7315.06,
-      "opsPerSec": 6835,
-      "p50Us": 4422.53,
-      "p95Us": 5723.02,
-      "p99Us": 6454.15,
+      "wallMs": 7160.73,
+      "opsPerSec": 6983,
+      "p50Us": 4401.79,
+      "p95Us": 5355.07,
+      "p99Us": 5867.07,
       "statusCodes": {
         "200": 50000
       },
@@ -46,11 +46,11 @@
       "completed": 50000,
       "errors": 0,
       "errorRate": 0,
-      "wallMs": 8686.63,
-      "opsPerSec": 5756,
-      "p50Us": 5425.31,
-      "p95Us": 6085.15,
-      "p99Us": 7013.39,
+      "wallMs": 9006.39,
+      "opsPerSec": 5552,
+      "p50Us": 5582.97,
+      "p95Us": 6539.56,
+      "p99Us": 7441.03,
       "statusCodes": {
         "200": 50000
       },
@@ -63,11 +63,11 @@
       "completed": 50000,
       "errors": 0,
       "errorRate": 0,
-      "wallMs": 7569.18,
-      "opsPerSec": 6606,
-      "p50Us": 4809.71,
-      "p95Us": 4994.01,
-      "p99Us": 5540.89,
+      "wallMs": 7408.18,
+      "opsPerSec": 6749,
+      "p50Us": 4706.27,
+      "p95Us": 4942.53,
+      "p99Us": 5422.81,
       "statusCodes": {
         "200": 50000
       },
@@ -80,11 +80,11 @@
       "completed": 50000,
       "errors": 0,
       "errorRate": 0,
-      "wallMs": 9048.94,
-      "opsPerSec": 5526,
-      "p50Us": 5588.58,
-      "p95Us": 6680.75,
-      "p99Us": 6843.35,
+      "wallMs": 9134.25,
+      "opsPerSec": 5474,
+      "p50Us": 5785.77,
+      "p95Us": 6231.26,
+      "p99Us": 6385.07,
       "statusCodes": {
         "200": 50000
       },
@@ -97,11 +97,11 @@
       "completed": 50000,
       "errors": 0,
       "errorRate": 0,
-      "wallMs": 7615.49,
-      "opsPerSec": 6566,
-      "p50Us": 4832.87,
-      "p95Us": 5149.84,
-      "p99Us": 5580.57,
+      "wallMs": 7526.93,
+      "opsPerSec": 6643,
+      "p50Us": 4729.9,
+      "p95Us": 5377.73,
+      "p99Us": 5970.79,
       "statusCodes": {
         "200": 50000
       },
@@ -114,11 +114,11 @@
       "completed": 50000,
       "errors": 0,
       "errorRate": 0,
-      "wallMs": 7071.29,
-      "opsPerSec": 7071,
-      "p50Us": 4460.3,
-      "p95Us": 4822.93,
-      "p99Us": 5420.24,
+      "wallMs": 7324.32,
+      "opsPerSec": 6827,
+      "p50Us": 4557.37,
+      "p95Us": 5223.69,
+      "p99Us": 6105.57,
       "statusCodes": {
         "403": 50000
       },

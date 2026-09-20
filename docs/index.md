@@ -25,9 +25,9 @@ features:
   - title: Framework-agnostic core
     details: Immutable engine evaluates requests through a thin adapter layer. Built-in Express, Fastify, and NestJS integrations — or bring your own with createAdapter.
   - title: Typed presets & levels
-    details: CRS-inspired packs for SQLi, XSS, scanners, path traversal, RFI, RCE, and protocol abuse. Dial coverage with low / balanced / high / paranoid.
+    details: 67 CRS-inspired rules covering SQL and NoSQL injection, XSS, Log4Shell/JNDI, reverse shells, path traversal, RFI, deserialization and protocol abuse. Dial coverage with low / balanced / high / paranoid.
   - title: Declarative rules
     details: Compose block, allow, and log rules with field matchers, compounds, and rate limits. Load the same DSL from JSON for config-driven deployments.
   - title: Performance-aware
-    details: Optional decision cache, field truncation, event-loop yielding, and bounded rate-limit stores — no external logging or cache dependencies.
+    details: Literal prefilters skip regex passes, plus an optional decision cache, field truncation, event-loop yielding and bounded rate-limit stores — with zero runtime dependencies.
 ---

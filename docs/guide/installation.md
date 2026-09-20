@@ -2,7 +2,7 @@
 
 ## Requirements
 
-- **Node.js** `>= 18`
+- **Node.js** — the package declares `>= 18`; CI builds and tests on **22, 24 and 26**
 - **TypeScript** optional but fully supported (the package ships `.d.ts` files)
 
 ## Install the package
@@ -64,4 +64,5 @@ app.use(expressWaf(config));
 
 ## Next
 
-[Quick start](/guide/quick-start) — minimal Express, Fastify, and NestJS examples.
+[Quick start](/guide/quick-start) — running in three steps, then the per-framework
+guides under [Integrations](/guide/integrations/).

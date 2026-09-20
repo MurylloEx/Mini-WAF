@@ -2,7 +2,7 @@
 
 **Mini-WAF** is a minimal Web Application Firewall for Node.js. You plug it in as middleware or a plugin and evaluate each request with typed presets and declarative rules.
 
-It is published on npm as [`mini-waf`](https://www.npmjs.com/package/mini-waf) (v3 architecture: framework-agnostic core + adapters).
+It is published on npm as [`mini-waf`](https://www.npmjs.com/package/mini-waf) — a v1 rewrite in TypeScript: framework-agnostic core plus thin adapters.
 
 ## Design goals
 
@@ -34,6 +34,6 @@ It is published on npm as [`mini-waf`](https://www.npmjs.com/package/mini-waf) (
 
 ## Next steps
 
-- [Installation](/guide/installation)
-- [Quick start](/guide/quick-start)
-- [Core concepts](/guide/concepts)
+- [Installation](/guide/installation) — requirements and peers
+- [Quick start](/guide/quick-start) — running in three steps
+- [Core concepts](/guide/concepts) — how rules and decisions work
