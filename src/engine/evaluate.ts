@@ -6,7 +6,11 @@ import {
   isNotCondition,
 } from '@/domain/rules';
 import type { WafHttpContext } from '@/domain/context';
-import { includesLower, matchesPattern } from '@/engine/matcher';
+import {
+  containsAnyLower,
+  includesLower,
+  matchesPattern,
+} from '@/engine/matcher';
 import {
   resolveFieldJoined,
   resolveFieldValues,
@@ -35,6 +39,7 @@ const DEFAULT_EVAL_OPTIONS: EvaluateOptions = {
   fields: { maxFieldLength: 0 },
 };
 
+
 function patternMatchesField(
   ctx: WafHttpContext,
   condition: FieldCondition,
@@ -48,20 +53,30 @@ function patternMatchesField(
     condition.includes !== undefined
       ? condition.includes.toLowerCase()
       : undefined;
+  const requires = condition.requires;
   const lowerValues =
-    needleLower !== undefined
+    needleLower !== undefined || requires !== undefined
       ? resolveFieldValuesLower(ctx, condition.field, fields)
       : undefined;
 
   return values.some((value, index) => {
+    // Literal prefilter: skip the whole value when it cannot possibly match.
+    // The lowercased view is memoized per request, so this is one indexOf
+    // scan instead of a regex pass over a potentially large body.
+    if (
+      requires !== undefined &&
+      !containsAnyLower(lowerValues?.[index] ?? value.toLowerCase(), requires)
+    ) {
+      return false;
+    }
     if (condition.equals !== undefined && value === condition.equals) {
       return true;
     }
-    if (needleLower !== undefined && lowerValues !== undefined) {
-      const haystackLower = lowerValues[index] ?? value.toLowerCase();
-      if (includesLower(haystackLower, needleLower)) {
-        return true;
-      }
+    if (
+      needleLower !== undefined &&
+      includesLower(lowerValues?.[index] ?? value.toLowerCase(), needleLower)
+    ) {
+      return true;
     }
     if (
       condition.matches !== undefined &&

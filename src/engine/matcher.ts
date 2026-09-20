@@ -38,6 +38,17 @@ export function includesLower(
   return haystackLower.includes(needleLower);
 }
 
+/**
+ * True when the (already lowercased) haystack contains any of the
+ * (already lowercased) needles. Backs the `requires` prefilter.
+ */
+export function containsAnyLower(
+  haystackLower: string,
+  needlesLower: readonly string[],
+): boolean {
+  return needlesLower.some((needle) => includesLower(haystackLower, needle));
+}
+
 /** Case-insensitive substring. Lowers both sides once per call. */
 export function includesIgnoreCase(haystack: string, needle: string): boolean {
   return includesLower(haystack.toLowerCase(), needle.toLowerCase());

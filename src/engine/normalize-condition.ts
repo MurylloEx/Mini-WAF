@@ -6,19 +6,38 @@ import {
   isNotCondition,
 } from '@/domain/rules';
 
+function lowerAll(values: readonly string[]): readonly string[] {
+  return values.map((value) => value.toLowerCase());
+}
+
+function isAlreadyLower(values: readonly string[]): boolean {
+  return values.every((value) => value === value.toLowerCase());
+}
+
 /**
- * Pre-lowercase static `includes` needles (matching is case-insensitive).
- * Avoids repeated `toLowerCase` on the needle during every field scan.
+ * Pre-lowercase static `includes` and `requires` needles (matching is
+ * case-insensitive). Avoids repeated `toLowerCase` on the needles during
+ * every field scan.
  */
 function normalizeFieldCondition(condition: FieldCondition): FieldCondition {
-  if (condition.includes === undefined) {
+  const includes =
+    condition.includes === undefined
+      ? undefined
+      : condition.includes.toLowerCase();
+  const requires =
+    condition.requires === undefined || isAlreadyLower(condition.requires)
+      ? condition.requires
+      : lowerAll(condition.requires);
+
+  if (includes === condition.includes && requires === condition.requires) {
     return condition;
   }
-  const includes = condition.includes.toLowerCase();
-  if (includes === condition.includes) {
-    return condition;
-  }
-  return { ...condition, includes };
+
+  return {
+    ...condition,
+    ...(includes !== undefined ? { includes } : {}),
+    ...(requires !== undefined ? { requires } : {}),
+  };
 }
 
 /** Deep-normalize a condition tree (immutable). */

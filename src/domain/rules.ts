@@ -78,6 +78,19 @@ export interface FieldCondition {
   readonly includes?: string;
   /** When set, condition matches after exceeding the rate limit. */
   readonly rateLimit?: RateLimitSpec;
+  /**
+   * Cheap literal gate evaluated **before** `matches` / `equals` / `includes`.
+   *
+   * A candidate value only reaches the pattern when it contains at least one
+   * of these substrings (case-insensitive). Use it whenever every payload the
+   * pattern can match necessarily contains a fixed literal — `indexOf` over a
+   * large body is far cheaper than a regex pass, and the field's lowercased
+   * form is computed once per request and shared by every rule.
+   *
+   * Leave it out when unsure: an incomplete `requires` list silently narrows
+   * the rule, because a value missing every literal is never matched.
+   */
+  readonly requires?: readonly string[];
 }
 
 /** Logical AND of nested conditions. */

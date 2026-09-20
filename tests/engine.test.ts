@@ -112,3 +112,47 @@ describe('rate limit rule', () => {
     expect(r3.decision).toBe('block');
   });
 });
+
+describe('requires prefilter', () => {
+  const rule = (requires?: readonly string[]): WafRule => ({
+    id: 'prefiltered',
+    action: 'block',
+    reason: 'test',
+    when: {
+      field: 'query.q',
+      matches: /danger/i,
+      ...(requires !== undefined ? { requires } : {}),
+    },
+  });
+
+  it('still blocks when the value contains a required literal', async () => {
+    const engine = createWafEngine({ rules: [rule(['danger'])] });
+    const mock = createMockContext({ query: { q: 'very DANGERous' } });
+    expect((await engine.handle(mock.ctx)).decision).toBe('block');
+  });
+
+  it('matches the needle case-insensitively', async () => {
+    const engine = createWafEngine({ rules: [rule(['DANGER'])] });
+    const mock = createMockContext({ query: { q: 'danger zone' } });
+    expect((await engine.handle(mock.ctx)).decision).toBe('block');
+  });
+
+  it('blocks when any one of several literals is present', async () => {
+    const engine = createWafEngine({ rules: [rule(['nope', 'danger'])] });
+    const mock = createMockContext({ query: { q: 'danger' } });
+    expect((await engine.handle(mock.ctx)).decision).toBe('block');
+  });
+
+  it('skips the pattern when no literal is present', async () => {
+    const engine = createWafEngine({ rules: [rule(['absent-literal'])] });
+    // The pattern alone would match; the prefilter short-circuits it.
+    const mock = createMockContext({ query: { q: 'danger' } });
+    expect((await engine.handle(mock.ctx)).decision).toBe('allow');
+  });
+
+  it('is a no-op when omitted', async () => {
+    const engine = createWafEngine({ rules: [rule()] });
+    const mock = createMockContext({ query: { q: 'danger' } });
+    expect((await engine.handle(mock.ctx)).decision).toBe('block');
+  });
+});

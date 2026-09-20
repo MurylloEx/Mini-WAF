@@ -86,6 +86,7 @@ export {
   matchesPattern,
   includesIgnoreCase,
   includesLower,
+  containsAnyLower,
 } from '@/engine/matcher';
 export {
   normalizeCondition,

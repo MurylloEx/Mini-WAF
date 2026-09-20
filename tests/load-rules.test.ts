@@ -139,3 +139,30 @@ describe('parseRulesFromJson / loadRules', () => {
     expect(rules[0]?.when).toHaveProperty('anyOf');
   });
 });
+
+describe('requires in JSON rules', () => {
+  it('parses a requires prefilter', () => {
+    const rules = loadRules([
+      {
+        id: 'json-prefilter',
+        action: 'block',
+        when: { field: 'query', matches: 'danger', requires: ['danger'] },
+      },
+    ]);
+    const condition = rules[0]?.when;
+    expect(condition && 'requires' in condition ? condition.requires : undefined)
+      .toEqual(['danger']);
+  });
+
+  it('rejects a non-string requires entry', () => {
+    expect(() =>
+      loadRules([
+        {
+          id: 'bad-prefilter',
+          action: 'block',
+          when: { field: 'query', matches: 'danger', requires: [1] },
+        },
+      ]),
+    ).toThrow(RuleParseError);
+  });
+});

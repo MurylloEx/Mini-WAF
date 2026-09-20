@@ -266,6 +266,7 @@ function loadCondition(value: JsonValue, path: string): WafCondition {
     'matches',
     'equals',
     'includes',
+    'requires',
     'rateLimit',
   ]);
   const unexpected = keys.find((key) => !allowedFieldKeys.has(key));
@@ -285,6 +286,10 @@ function loadCondition(value: JsonValue, path: string): WafCondition {
     obj.includes === undefined
       ? undefined
       : expectString(obj.includes, `${path}.includes`);
+  const requires =
+    obj.requires === undefined
+      ? undefined
+      : expectStringArray(obj.requires, `${path}.requires`);
   const rateLimit =
     obj.rateLimit === undefined
       ? undefined
@@ -307,6 +312,7 @@ function loadCondition(value: JsonValue, path: string): WafCondition {
     ...(matches !== undefined ? { matches } : {}),
     ...(equals !== undefined ? { equals } : {}),
     ...(includes !== undefined ? { includes } : {}),
+    ...(requires !== undefined ? { requires } : {}),
     ...(rateLimit !== undefined ? { rateLimit } : {}),
   };
 }
