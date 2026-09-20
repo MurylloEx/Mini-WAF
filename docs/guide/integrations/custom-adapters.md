@@ -108,128 +108,16 @@ interface WafEvaluationResult {
 }
 ```
 
-## Koa example (complete)
+## A complete worked example
 
-No built-in Koa package ships with `mini-waf` — this is the officially supported extension path, taken from `integration/koa/server.mjs` and expanded here with the reasoning behind each field mapping.
+[Koa](/guide/integrations/koa) is the reference implementation of everything on
+this page: a real adapter, field by field, with the reasoning behind each
+mapping. Start there, then come back for the interface details.
 
-```ts
-import Koa from 'koa';
-import Router from '@koa/router';
-import bodyParser from 'koa-bodyparser';
-import { createAdapter, createMiniWaf } from 'mini-waf';
-import type { WafHttpContext } from 'mini-waf';
+Other frameworks that follow the same path have their own pages —
+[Hono](/guide/integrations/hono), [Hapi](/guide/integrations/hapi) and
+[Next.js](/guide/integrations/nextjs).
 
-const waf = createMiniWaf({
-  presets: ['default'],
-  level: 'balanced',
-  logging: { level: 'info' },
-});
-
-// Koa's `ctx` object plays double duty as both "request" and "response" in
-// this codebase's terms, so both type parameters of createAdapter<TRequest, TResponse>
-// resolve to the same Koa Context type.
-const koaAdapter = createAdapter({
-  name: 'koa',
-
-  // Method / URL: Koa exposes these directly on ctx, mirroring the raw Node
-  // IncomingMessage values (no normalization needed on Koa's side).
-  getMethod: (ctx) => ctx.method,
-  getUrl: (ctx) => ctx.url,
-
-  // `ctx.path` is Koa's already-decoded, query-string-free pathname — cheaper
-  // and more correct than deriving it from `ctx.url` ourselves, so we supply
-  // the optional `getPath` handler instead of relying on createAdapter's
-  // regex fallback (`url.match(/^[^?]*/)`).
-  getPath: (ctx) => ctx.path,
-
-  // `ctx.ip` already resolves X-Forwarded-For when Koa's `app.proxy = true`
-  // is set; createAdapter still runs it through normalizeClientIp for
-  // IPv4-mapped IPv6 collapsing and rate-limit-key canonicalization.
-  getIp: (ctx) => ctx.ip,
-
-  // `ctx.get(name)` is Koa's case-insensitive single-header getter. It
-  // returns '' (not undefined) when absent, so coerce to `undefined` —
-  // WafHttpContext.getHeader must distinguish "missing" from "empty string"
-  // for correctness of `headers.*` field conditions.
-  getHeader: (ctx, name) => ctx.get(name) || undefined,
-
-  // Full header bag for `field: 'headers'` (OR-across-all-values rules) and
-  // for cookie-header fallback parsing inside createAdapter.
-  getHeaders: (ctx) => ctx.headers,
-
-  // Parsed query object for `field: 'query'` / `field: 'query.<key>'`.
-  getQuery: (ctx) => ctx.query,
-
-  // koa-bodyparser stashes the parsed body on `ctx.request.body`. This MUST
-  // run after the bodyParser middleware (see app.use order below) or every
-  // body-scoped rule (SQLi/XSS presets, custom `field: 'body'` rules) sees
-  // an empty string and never fires — a coverage gap, not a crash.
-  getRawBody: (ctx) => ctx.request.body ?? '',
-
-  // How the WAF's decision translates back into a Koa response: Koa uses
-  // `ctx.status` / `ctx.body` assignment rather than an explicit `res.end()`
-  // call, so `drop` just sets both. The engine passes the rule's configured
-  // `blockStatusCode` (default 403) and `blockBody` (default 'Forbidden').
-  setResponseHeader: (ctx, name, value) => ctx.set(name, String(value)),
-  drop: (ctx, _res, status, body) => {
-    ctx.status = status;
-    ctx.body = body;
-  },
-});
-
-const app = new Koa();
-const router = new Router();
-
-// Body parser MUST run before the WAF so body rules can fire (same ordering
-// requirement as Express — see Installation → Middleware order).
-app.use(bodyParser({ enableTypes: ['json', 'form'] }));
-
-app.use(async (ctx, next) => {
-  const result = await waf.protect(koaAdapter, ctx, ctx);
-  // `result.decision === 'block'` means `drop()` already set ctx.status/body;
-  // calling `next()` anyway would let downstream middleware overwrite them,
-  // so only continue the chain on `allow`.
-  if (result.decision === 'allow') {
-    await next();
-  }
-  // Optional: inspect `result.loggedRules` here to forward audit events to
-  // your own metrics/telemetry, independent of the built-in logging sink.
-});
-
-router.get('/', (ctx) => {
-  ctx.body = { app: 'koa', ok: true };
-});
-
-router.get('/health', (ctx) => {
-  ctx.body = { status: 'ok' };
-});
-
-router.get('/search', (ctx) => {
-  ctx.body = { q: ctx.query.q ?? null };
-});
-
-router.post('/echo', (ctx) => {
-  ctx.body = { body: ctx.request.body };
-});
-
-app.use(router.routes());
-app.use(router.allowedMethods());
-
-app.listen(3104, '127.0.0.1', () => {
-  console.log('[koa] listening on http://127.0.0.1:3104');
-});
-```
-
-### Why each field is mapped that way
-
-| Context method | Koa source | Reasoning |
-|---|---|---|
-| `getMethod` | `ctx.method` | Same raw string Node exposes; no case normalization needed (`WafField: 'method'` rules typically use `equals`/`matches` against uppercase HTTP verbs). |
-| `getPath` | `ctx.path` | Koa pre-strips the query string and decodes percent-escapes; avoids re-deriving it with a regex and gets consistent behavior with `path`-scoped presets like `preset-path-traversal`. |
-| `getIp` | `ctx.ip` (→ `normalizeClientIp`) | Koa already understands `app.proxy` / `X-Forwarded-For`; the adapter layer only needs to canonicalize the *form* of the address, not re-derive which hop is "the" client. |
-| `getHeader` | `ctx.get(name) \|\| undefined` | `WafHttpContext.getHeader` is used by `headers.<key>` field resolution (`src/engine/field-resolver.ts`); returning `''` instead of `undefined` would make `{ field: 'headers.x-api-key', matches: /.+/ }`-style presence checks behave incorrectly. |
-| `getRawBody` | `ctx.request.body` | koa-bodyparser's output location; `bodyToString` (used internally by `createAdapter`) accepts the parsed JSON value directly and serializes it lazily. |
-| `drop` | `ctx.status` / `ctx.body` assignment | Koa's response model is assignment-based rather than `res.end()`-based; mapping the WAF's abstract "end this request with a status + body" onto Koa's idiom is the entire job of a custom adapter. |
 
 ## Built-in adapter factories
 

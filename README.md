@@ -19,7 +19,7 @@ Supports **Express**, **Fastify**, and **NestJS** (optional peers — install on
 
 Ships **dual CommonJS + ESM** with per-condition types, so `require`, `import`, and every `moduleResolution` mode (`node10`, `node16`, `nodenext`, `bundler`) resolve — subpaths included. Tree-shakeable (`sideEffects: false`), zero runtime dependencies.
 
-**Documentation:** [https://murylloex.github.io/Mini-WAF/](https://murylloex.github.io/Mini-WAF/) (source in [`docs/`](./docs/); run locally with `npm run docs:dev`)
+**Documentation:** [https://murylloex.github.io/Mini-WAF/](https://murylloex.github.io/Mini-WAF/)
 
 | | |
 |---|---|

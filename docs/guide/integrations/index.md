@@ -19,12 +19,26 @@ export const wafConfig: WafConfig = {
 
 ## Pick your framework
 
+**Built-in entrypoints** — the adapter is already wired for you:
+
 | Framework | Import | Peer | Wiring | Page |
 |-----------|--------|------|--------|------|
 | Express | `mini-waf/express` | `express >= 4` | `app.use(expressWaf(config))` | [Express](/guide/integrations/express) |
 | Fastify | `mini-waf/fastify` | `fastify >= 4` | `app.register(fastifyWaf, { config })` | [Fastify](/guide/integrations/fastify) |
 | NestJS | `mini-waf/nestjs` | `@nestjs/common` + `@nestjs/core >= 9` | `MiniWafModule.forRoot({ config })` | [NestJS](/guide/integrations/nestjs) |
-| Anything else | `mini-waf` + `mini-waf/adapters` | none | `createAdapter` + `createMiniWaf` | [Custom adapters](/guide/integrations/custom-adapters) |
+
+**Via a custom adapter** — a dozen lines of mapping, documented per framework:
+
+| Framework | Shape | Page |
+|-----------|-------|------|
+| Koa | Mutates `ctx`, middleware skips `next()` | [Koa](/guide/integrations/koa) |
+| Hono | Returns a `Response` | [Hono](/guide/integrations/hono) |
+| Hapi | Server extension + `takeover()` | [Hapi](/guide/integrations/hapi) |
+| Next.js | Returns a `Response` (route handlers) | [Next.js](/guide/integrations/nextjs) |
+| Anything else | — | [Custom adapters](/guide/integrations/custom-adapters) |
+
+Frameworks exposing `(req, res, next)` — Restify, Polka, tinyhttp, Connect,
+Sails, Feathers — can reuse `createExpressAdapter()` directly.
 
 Peers are declared **optional** — installing Mini-WAF does not pull in a
 framework you do not use.
