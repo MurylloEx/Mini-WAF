@@ -8,6 +8,15 @@ export interface LruEntry<V> {
   readonly expiresAt: number;
 }
 
+/**
+ * Bounded least-recently-used cache with an optional TTL, used for the
+ * decision cache and the IP normalization memo.
+ *
+ * Reading a key marks it as recently used; once `maxEntries` is exceeded the
+ * coldest key is evicted. Values are treated as immutable by callers.
+ *
+ * @typeParam V - Stored value type.
+ */
 export class LruCache<V> {
   private readonly store = new Map<string, LruEntry<V>>();
 

@@ -26,6 +26,13 @@ const OS_FILE_ACCESS =
 const RESTRICTED_PATH =
   /(?:\/|^)(?:\.git(?:\/|$)|\.env(?:\.|$)|\.htaccess|\.htpasswd|\.DS_Store|wp-config\.php|web\.config|composer\.(?:json|lock)|id_rsa(?:\.pub)?)/i;
 
+/**
+ * Path traversal and local file inclusion (CRS REQUEST-930).
+ *
+ * Covers plain `../`, percent/double/overlong-encoded variants — which matter
+ * because adapters expose `path` exactly as it arrived on the wire — and
+ * probes for sensitive OS or application files.
+ */
 export const pathTraversalRules: readonly WafRule[] = [
   {
     id: 'preset-path-traversal',

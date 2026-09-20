@@ -18,6 +18,7 @@ export interface RateLimitHit {
 /** key → timestamps inside the current window (newest last). */
 export type RateLimitState = ReadonlyMap<string, readonly number[]>;
 
+/** A fresh, empty rate-limit state. */
 export function emptyRateLimitState(): RateLimitState {
   return new Map<string, readonly number[]>();
 }

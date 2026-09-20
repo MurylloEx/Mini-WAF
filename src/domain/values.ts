@@ -181,6 +181,11 @@ export function normalizeFiles(
   });
 }
 
+/**
+ * Best available display name for an uploaded file, trying `name`,
+ * `filename` then `originalname`. Returns `''` when the bag carries none —
+ * this is what upload rules such as `preset-dangerous-upload` match against.
+ */
 export function fileDisplayName(file: UploadedFile): string {
   return file.name ?? file.filename ?? file.originalname ?? '';
 }

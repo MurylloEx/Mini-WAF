@@ -9,6 +9,11 @@ import {
 } from '@/adapters/nestjs.adapter';
 import type { ExpressNext } from '@/adapters/express.adapter';
 
+/**
+ * DI token holding the options passed to `MiniWafModule.forRoot`. Inject it
+ * with `@Inject(MINI_WAF_OPTIONS)` to read the resolved configuration from
+ * another provider.
+ */
 export const MINI_WAF_OPTIONS = 'MINI_WAF_OPTIONS';
 
 export interface NestMiniWafOptions extends WafEngineOptions {

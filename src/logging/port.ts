@@ -49,6 +49,7 @@ const LOG_LEVEL_RANK: Readonly<Record<WafLogLevel, number>> = {
   debug: 2,
 };
 
+/** Type guard: whether an arbitrary string is a valid {@link WafLogLevel}. */
 export function isWafLogLevel(value: string): value is WafLogLevel {
   return value === 'error' || value === 'info' || value === 'debug';
 }

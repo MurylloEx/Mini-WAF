@@ -50,6 +50,11 @@ const REGEX_FLAG_CHARS = new Set([
   'y',
 ]);
 
+/**
+ * Thrown by {@link loadRules} / {@link parseRulesFromJson} when a JSON rule is
+ * malformed. `path` points at the offending key (for example
+ * `rules[2].when.rateLimit.max`) so the failure is actionable at boot.
+ */
 export class RuleParseError extends Error {
   readonly path: string;
 

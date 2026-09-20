@@ -18,6 +18,27 @@ export interface MiniWafInstance extends WafEngine {
   ): Promise<WafEvaluationResult>;
 }
 
+/**
+ * Build a WAF instance: the main entry point when you are not using one of
+ * the framework helpers (`expressWaf`, `fastifyWaf`, `MiniWafModule`).
+ *
+ * Resolves `presets` and `rules` into a single immutable rule list, filters it
+ * by `level`, and returns an object that can evaluate requests.
+ *
+ * @param config - Presets, custom rules, protection level and the
+ * logging/performance knobs. Defaults to an empty config (no rules).
+ * @param options - Engine-level injectables, such as a `logger` or a shared
+ * `rateLimitStore`.
+ * @returns The resolved rule list plus `handle` (evaluate a
+ * {@link WafHttpContext}) and `protect` (evaluate through an adapter).
+ *
+ * @example
+ * ```ts
+ * const waf = createMiniWaf({ presets: ['default'], level: 'balanced' });
+ * const result = await waf.handle(ctx);
+ * if (result.decision === 'block') console.log(result.matchedRule?.id);
+ * ```
+ */
 export function createMiniWaf(
   config: WafConfig = {},
   options?: WafEngineOptions,

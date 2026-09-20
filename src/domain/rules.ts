@@ -221,24 +221,28 @@ export interface WafEvaluationResult {
   readonly loggedRules: readonly WafRule[];
 }
 
+/** Type guard: whether a condition is a single-field match (`field`). */
 export function isFieldCondition(
   condition: WafCondition,
 ): condition is FieldCondition {
   return 'field' in condition;
 }
 
+/** Type guard: whether a condition is a logical AND (`all`). */
 export function isAllCondition(
   condition: WafCondition,
 ): condition is AllCondition {
   return 'all' in condition;
 }
 
+/** Type guard: whether a condition is a logical OR (`anyOf`). */
 export function isAnyOfCondition(
   condition: WafCondition,
 ): condition is AnyOfCondition {
   return 'anyOf' in condition;
 }
 
+/** Type guard: whether a condition is a negation (`not`). */
 export function isNotCondition(
   condition: WafCondition,
 ): condition is NotCondition {

@@ -33,6 +33,10 @@ const LEVEL_RANK: Readonly<Record<ProtectionLevel, number>> = {
   paranoid: 3,
 };
 
+/**
+ * Numeric rank of a protection level, ordered `low` (0) through
+ * `paranoid` (3). Useful for comparing two levels directly.
+ */
 export function protectionLevelRank(level: ProtectionLevel): number {
   return LEVEL_RANK[level];
 }
@@ -48,6 +52,7 @@ export function isLevelActive(
   return protectionLevelRank(configured) >= protectionLevelRank(minLevel);
 }
 
+/** Type guard: whether an arbitrary string is a valid {@link ProtectionLevel}. */
 export function isProtectionLevel(value: string): value is ProtectionLevel {
   return (PROTECTION_LEVELS as readonly string[]).includes(value);
 }
