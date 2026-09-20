@@ -29,7 +29,8 @@ export default defineConfig({
     ['meta', { name: 'theme-color', content: '#0a0a0a' }],
   ],
   themeConfig: {
-    logo: { src: '/mini-waf-logo.png', alt: 'Mini-WAF' },
+    // Mark only (wall + shield): the navbar already prints the name.
+    logo: { src: '/mini-waf-mark.png', alt: 'Mini-WAF' },
     siteTitle: 'Mini-WAF',
     nav: [
       { text: 'Guide', link: '/guide/introduction' },
