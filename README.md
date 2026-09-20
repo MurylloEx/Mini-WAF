@@ -234,7 +234,7 @@ Custom rules **without** `minLevel` are treated as `low` (active at any level).
 |-------|-------------------|----------|-------------|----------|
 | `low` | 19 | Obvious scanners (UA), classic SQLi + DBMS primitives, plain & encoded traversal / LFI, stream-wrapper RFI, PHP RCE, shell RCE, JNDI/Log4Shell, reverse shells, fetch-and-exec, Windows LOLBins, SSRF metadata | APIs sensitive to false positives | PL1 (core) |
 | `balanced` (default) | 45 | `low` + XSS (incl. encoded tags, `data:` URIs, attribute vectors), SQLi tautologies & `SELECT … FROM`, NoSQL operators, uploads & extension bypass, remote-URL RFI, SSTI, Node/lang exec, deserialization, null-byte, DoS rate-limit, protocol splitting/smuggling | General production | PL1–PL2 |
-| `high` | 61 | `balanced` + SSI, hex flood, prototype pollution, advanced & blind SQLi, XSS JS primitives, CL+TE, shell `$()`/`${IFS}`, session ID in URL | Under attack / broader coverage | PL2 |
+| `high` | 61 | `balanced` + SSI, hex flood, prototype pollution, advanced & blind SQLi, XSS JS primitives, CL+TE, shell `$()` and parameter-expansion tricks, session ID in URL | Under attack / broader coverage | PL2 |
 | `paranoid` | 67 | `high` + broad UAs, generic HTML tags, empty UA, shebang, oversized headers | Max coverage; more FPs | PL3–PL4 |
 
 ```ts
