@@ -15,44 +15,49 @@ Latencies in microseconds.
 
 | ID | What it measures | Rules | ops/s | p50 | p95 | p99 |
 |----|-------------------|------:|------:|----:|----:|----:|
-| **A0** | Baseline `handle()` with zero rules | 0 | 397.47k/s | 1.11 µs | 3.60 µs | 6.94 µs |
-| **A1** | `default` + `balanced`, clean allow | 44 | 68.32k/s | 12.28 µs | 27.77 µs | 32.60 µs |
-| **A2** | A1 + `decisionCache` (hits after warmup) | 44 | 406.60k/s | 2.00 µs | 3.60 µs | 5.47 µs |
-| **A3** | A1 + ~8KB JSON body | 44 | 7.44k/s | 128.84 µs | 153.63 µs | 177.68 µs |
-| **A4** | A1 + small (~24B) body | 44 | 71.78k/s | 13.01 µs | 14.66 µs | 27.04 µs |
-| **A5** | A1 SQLi — block path (early-exit) | 44 | 114.77k/s | 7.97 µs | 9.46 µs | 17.89 µs |
-| **A6-low** | `level: 'low'` clean allow | 19 | 132.03k/s | 6.88 µs | 8.35 µs | 14.82 µs |
-| **A6-balanced** | `level: 'balanced'` clean allow | 44 | 76.28k/s | 12.06 µs | 16.01 µs | 24.51 µs |
-| **A6-high** | `level: 'high'` clean allow | 60 | 52.48k/s | 17.49 µs | 24.60 µs | 39.86 µs |
-| **A6-paranoid** | `level: 'paranoid'` clean allow | 66 | 47.97k/s | 19.68 µs | 22.82 µs | 36.46 µs |
-| **A7-y0** | Paranoid, `ruleYieldEvery: 0` | 66 | 50.21k/s | 19.23 µs | 20.71 µs | 27.26 µs |
-| **A7-y32** | Paranoid, `ruleYieldEvery: 32` | 66 | 48.05k/s | 20.05 µs | 21.61 µs | 28.14 µs |
+| **A0** | Baseline `handle()` with zero rules | 0 | 389.22k/s | 1.10 µs | 4.50 µs | 7.40 µs |
+| **A1** | `default` + `balanced`, clean allow | 50 | 58.77k/s | 13.70 µs | 31.20 µs | 40.50 µs |
+| **A2** | A1 + `decisionCache` (hits after warmup) | 50 | 373.80k/s | 2.00 µs | 4.30 µs | 6.40 µs |
+| **A3** | A1 + ~8KB JSON body | 50 | 7.17k/s | 131.70 µs | 169.30 µs | 212.10 µs |
+| **A4** | A1 + small (~24B) body | 50 | 64.43k/s | 14.40 µs | 18.80 µs | 30.60 µs |
+| **A5** | A1 SQLi — block path (early-exit) | 50 | 108.47k/s | 8.60 µs | 9.80 µs | 18.20 µs |
+| **A6-low** | `level: 'low'` clean allow | 19 | 130.84k/s | 6.90 µs | 9.90 µs | 15.40 µs |
+| **A6-balanced** | `level: 'balanced'` clean allow | 50 | 67.94k/s | 13.30 µs | 21.00 µs | 30.40 µs |
+| **A6-high** | `level: 'high'` clean allow | 77 | 35.98k/s | 25.10 µs | 43.00 µs | 60.40 µs |
+| **A6-paranoid** | `level: 'paranoid'` clean allow | 88 | 33.98k/s | 26.70 µs | 45.00 µs | 62.30 µs |
+| **A7-y0** | Paranoid, `ruleYieldEvery: 0` | 88 | 33.71k/s | 27.10 µs | 44.60 µs | 62.10 µs |
+| **A7-y32** | Paranoid, `ruleYieldEvery: 32` | 88 | 34.01k/s | 27.20 µs | 40.60 µs | 59.00 µs |
 
-> `A1`–`A5` run the `balanced` pack minus `preset-dos-rate-limit`, hence 44
-> rules where `A6-balanced` reports 45.
+> `A1`–`A5` run the `balanced` pack minus `preset-dos-rate-limit`, hence 50
+> rules where `A6-balanced` reports 51.
+> `A6-high` / `A6-paranoid` auto-enable transport decoding, so their cost
+> already includes it (see the Base64/URL note below).
 
 **Highlights**
 
-- **A0 → A1**: 44 rules → ~17% of baseline ops/s (+11.2 µs p50).
+- **A0 → A1**: 50 rules → ~15% of baseline ops/s (+12.6 µs p50).
 - **A1 → A2**: `decisionCache` on a repeated fingerprint is ~6× faster
-  (68k → 407k ops/s) and is unaffected by rule count — the cheapest win
+  (59k → 374k ops/s) and is unaffected by rule count — the cheapest win
   available for traffic with repeated shapes.
-- **A4 → A3**: ~8KB body is still the costly path (~10% of small-body ops/s) —
+- **A4 → A3**: ~8KB body is still the costly path (~11% of small-body ops/s) —
   see [Known inherent costs](#known-inherent-costs).
 - **A1 → A5**: block can be *faster* than a full clean allow (early-exit).
 - **A6-low → A6-paranoid**: cost scales roughly with rule count
-  (19 → 66 rules); `low` remains ~7 µs p50.
-- **A7-y0 ↔ A7-y32**: within noise on a 66-rule pack; the ~1ms yield budget
+  (19 → 88 rules); `low` remains ~7 µs p50.
+- **A7-y0 ↔ A7-y32**: within noise on an 88-rule pack; the ~1ms yield budget
   does not trip on a clean paranoid scan.
-- **Base64 decode (`high`/`paranoid`)**: these levels auto-enable whole-value
-  Base64 decoding. On clean traffic (nothing decodes) it adds a per-field
-  memoized shape check — measured at roughly **+10–15 % of `A6-high` /
-  `A6-paranoid` cost**, and **zero** at `low`/`balanced` (the match path is
-  byte-for-byte identical when decoding is off). Decode work only runs when a
-  field value is actually a Base64 blob that survives the shape + printable
-  gates; a JSON body is additionally parsed once (memoized, depth/count
-  bounded) so its string values reach the same decoder. Set
-  `decode: { base64: false }` to opt out at high+.
+- **Transport decode (`high`/`paranoid`)**: these levels auto-enable whole-value
+  **Base64** decoding and **percent (URL)** decoding. On clean traffic (nothing
+  decodes) the two decoders add a per-field memoized shape check (a Base64
+  char-class/length test and a `String.includes('%')` test) — an isolated
+  decode-on vs decode-off measurement at `high` puts this at **≈ +10 %** of the
+  `A6-high` scan (in the +10–15 % band), and **zero** at `low`/`balanced` (the
+  match path is byte-for-byte identical when decoding is off). Decode work only
+  runs when a value is actually a Base64 blob surviving the shape + printable
+  gates, or actually carries a `%XX` escape that changes on decode. A JSON body
+  is additionally parsed once (memoized, depth/count bounded) so its string
+  values reach the same decoders. Set `decode: { base64: false, url: false }` to
+  opt out at high+.
 
 ## HTTP results (`B0`/`B1`, `C0`–`C3`)
 
@@ -108,7 +113,7 @@ with a lower `maxFieldLength`, narrower `presets`, a smaller `level`, or
 
 Higher levels activate more rules; ops/s and p50 track rule count roughly
 linearly. No super-linear cliff in this suite. With `presets: ['default']` the
-active count is 19 / 45 / 61 / 67 for `low` / `balanced` / `high` / `paranoid`.
+active count is 19 / 51 / 78 / 89 for `low` / `balanced` / `high` / `paranoid`.
 
 Cost is really *rules × candidate values per field*: a rule targeting `query`
 runs once per query parameter, so a request with ten parameters costs ten

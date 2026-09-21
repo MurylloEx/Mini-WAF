@@ -22,12 +22,19 @@ Counts assume `presets: ['default']`. Cost tracks rule count roughly linearly,
 so the level is also your main performance dial — see
 [Performance](/guide/performance).
 
-`high` and `paranoid` also auto-enable **Base64 transport decoding**: a whole
-field value that is a single Base64 blob — a query/cookie value, or one JSON
-body value like `{"q":"<base64>"}` — is decoded and rescanned with the same
-rules, so an attack wrapped in Base64 can no longer slip a plaintext pattern.
-It is a new false-positive axis, so it stays off at `low`/`balanced`; override
-either way with `decode: { base64: true | false }`. See
+`high` and `paranoid` also auto-enable **transport decoding**, two decoders that
+rescan a decoded value with the same rules so an encoded attack can no longer
+slip a plaintext pattern:
+
+- **Base64** — a whole field value that is a single Base64 blob (padded or
+  unpadded), such as a query/cookie value or one JSON body value like
+  `{"q":"<base64>"}`.
+- **URL** — a value carrying a `%XX` escape is percent-decoded once, reaching
+  payloads sent percent-encoded on surfaces the framework does not decode itself
+  (URL path segments, multipart parts, raw bodies).
+
+Both are a new false-positive axis, so they stay off at `low`/`balanced`;
+override either way with `decode: { base64: …, url: … }`. See
 [Configuration](/guide/configuration) and [Performance](/guide/performance).
 
 ## Gating your own rules

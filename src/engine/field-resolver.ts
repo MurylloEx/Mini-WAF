@@ -3,9 +3,16 @@ import type { WafHttpContext } from '@/domain/context';
 import { fileDisplayName, scalarToString } from '@/domain/values';
 import {
   expandBase64Candidates,
+  expandUrlCandidates,
   extractJsonStringValues,
+  extractPathSegments,
   type DecodeSettings,
 } from '@/engine/decode';
+
+/** True when any transport decoder is enabled for this request. */
+function decodeActive(decode: DecodeSettings | undefined): decode is DecodeSettings {
+  return decode !== undefined && (decode.base64 || decode.url);
+}
 
 export interface FieldResolveOptions {
   /** Truncate each candidate string to this length. `0` = unlimited. */
@@ -177,7 +184,7 @@ export function resolveFieldMatchValues(
   options: FieldResolveOptions = DEFAULT_OPTIONS,
 ): readonly string[] {
   const decode = options.decode;
-  if (decode === undefined || !decode.base64) {
+  if (!decodeActive(decode)) {
     return resolveFieldValues(ctx, field, options);
   }
   const cached = options.memoMatch?.get(field);
@@ -186,19 +193,33 @@ export function resolveFieldMatchValues(
   }
 
   const raw = resolveFieldValues(ctx, field, options);
-  // A payload delivered as one JSON body *value* (`{"q":"<base64>"}`) is not a
-  // whole-value Base64 string on its own — the raw body is `{...}`. Pull the
-  // JSON string leaves so the decoder can reach it. Feeds the decoder only; the
-  // raw body is already scanned as a blob, so no plaintext candidate is added.
-  const decodeInput =
-    field === 'body' && raw.length > 0
-      ? [...raw, ...extractJsonStringValues(raw[0] ?? '')]
-      : raw;
-  const extras = expandBase64Candidates(decodeInput, decode);
-  // No decodable candidate: reuse the raw array reference verbatim, so the
-  // lowercased resolver below can detect the no-extras case by identity and
-  // skip re-lowering a possibly large body.
-  const merged = extras.length === 0 ? raw : [...raw, ...extras];
+  // A payload delivered as one JSON body *value* (`{"q":"<base64>"}`) or one URL
+  // path segment (`/a/<base64>`) is not a whole-value blob on its own — the raw
+  // body is `{...}` and the raw path carries `/` separators. Pull the JSON
+  // string leaves / path segments so the decoders can reach them. Feeds the
+  // decoders only; the raw value is already scanned, so no plaintext candidate
+  // is added.
+  const decodeInput = ((): readonly string[] => {
+    if (raw.length === 0) {
+      return raw;
+    }
+    if (field === 'body') {
+      return [...raw, ...extractJsonStringValues(raw[0] ?? '')];
+    }
+    if (field === 'path') {
+      return [...raw, ...extractPathSegments(raw[0] ?? '')];
+    }
+    return raw;
+  })();
+  const base64Extras = expandBase64Candidates(decodeInput, decode);
+  const urlExtras = expandUrlCandidates(decodeInput, decode);
+  // No decodable candidate from either decoder: reuse the raw array reference
+  // verbatim, so the lowercased resolver below can detect the no-extras case by
+  // identity and skip re-lowering a possibly large body.
+  const merged =
+    base64Extras.length === 0 && urlExtras.length === 0
+      ? raw
+      : [...raw, ...base64Extras, ...urlExtras];
 
   options.memoMatch?.set(field, merged);
   return merged;
@@ -215,7 +236,7 @@ export function resolveFieldMatchValuesLower(
   options: FieldResolveOptions = DEFAULT_OPTIONS,
 ): readonly string[] {
   const decode = options.decode;
-  if (decode === undefined || !decode.base64) {
+  if (!decodeActive(decode)) {
     return resolveFieldValuesLower(ctx, field, options);
   }
   const cached = options.memoMatchLower?.get(field);

@@ -19,7 +19,7 @@ All options are fields on `WafConfig`. Passed to `expressWaf(config)`, `fastifyW
   ruleYieldEvery?: number;     // yield to event loop every N rules; default 32 (0 = off)
   maxRateLimitKeys?: number;   // LRU cap on distinct rate-limit keys; default 10000
   decisionCache?: { max?: number; ttlMs?: number }; // short-TTL decision LRU; off by default
-  decode?: { base64?: boolean }; // decode whole-value Base64 (query/cookies + JSON body values) and rescan; auto-on at high+
+  decode?: { base64?: boolean; url?: boolean }; // decode whole-value Base64 + percent-encoding and rescan; auto-on at high+
 }
 ```
 
@@ -79,13 +79,19 @@ const config: WafConfig = {
   // DoS counters keep advancing instead of being served from cache.
   decisionCache: { max: 256, ttlMs: 1_000 },
 
-  // Transport decoding. When a whole field value (query / cookies) — or a
-  // single JSON body value like {"q":"<base64>"} — is one Base64 blob, decode
-  // it and rescan the plaintext with the existing rules, closing encoders that
-  // wrap an attack in Base64. A new false-positive axis, so it is OFF at
-  // low/balanced and AUTO-ON at high+; set `base64` explicitly to force it
-  // either way. Zero added cost while off.
-  decode: { base64: true },
+  // Transport decoding, two independent decoders that rescan a decoded value
+  // with the existing rules:
+  //   base64 — a whole field value (query / cookies), or a single JSON body
+  //            value like {"q":"<base64>"}, that is one Base64 blob (padded or
+  //            unpadded) is decoded; closes encoders that wrap an attack in
+  //            Base64.
+  //   url    — a value carrying a `%XX` escape is percent-decoded once; reaches
+  //            payloads sent percent-encoded on surfaces the framework does not
+  //            decode itself (URL path, multipart parts, raw bodies).
+  // Both are a new false-positive axis, so they are OFF at low/balanced and
+  // AUTO-ON at high+; set `base64` / `url` explicitly to force either way. Zero
+  // added cost while off.
+  decode: { base64: true, url: true },
 };
 ```
 
@@ -105,7 +111,7 @@ const config: WafConfig = {
 | `ruleYieldEvery` | `number` | `32` | Yield interval; `0` = never |
 | `maxRateLimitKeys` | `number` | `10000` | Cap distinct rate-limit keys |
 | `decisionCache` | `{ max?, ttlMs? }` | off | Decision LRU; auto-off if any active rule has `rateLimit` |
-| `decode` | `{ base64? }` | auto-on at `high`+ | Decode whole-value Base64 (query/cookies + JSON body values) and rescan; off at `low`/`balanced` |
+| `decode` | `{ base64?, url? }` | auto-on at `high`+ | Decode whole-value Base64 (query/cookies + JSON body values) and percent-encoding, then rescan; off at `low`/`balanced` |
 
 `WafPresetName`: `'default' | 'sqli' | 'xss' | 'scanners' | 'path-traversal' | 'rfi' | 'rce' | 'protocol'`.
 

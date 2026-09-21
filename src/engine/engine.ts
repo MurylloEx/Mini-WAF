@@ -139,14 +139,18 @@ export function buildRuleList(config: WafConfig): readonly WafRule[] {
 }
 
 /**
- * Base64 transport-decode defaults off at `low`/`balanced` (zero added cost on
- * the production-default tiers) and auto-on at `high`+, matching the leveling
- * of the aggressive presets. An explicit `decode.base64` overrides either way.
+ * Transport-decode defaults off at `low`/`balanced` (zero added cost on the
+ * production-default tiers) and auto-on at `high`+, matching the leveling of the
+ * aggressive presets. Both the Base64 and percent (`url`) decoders share this
+ * policy; an explicit `decode.base64` / `decode.url` overrides either way.
  */
 function resolveDecode(config: WafConfig): DecodeSettings {
   const level = config.level ?? DEFAULT_PROTECTION_LEVEL;
   const autoOn = protectionLevelRank(level) >= protectionLevelRank('high');
-  return { base64: config.decode?.base64 ?? autoOn };
+  return {
+    base64: config.decode?.base64 ?? autoOn,
+    url: config.decode?.url ?? autoOn,
+  };
 }
 
 function resolvePerformance(config: WafConfig): ResolvedPerformance {
@@ -440,7 +444,7 @@ function defaultScanOptions(
   rateLimits: RateLimitPort,
   maxFieldLength = DEFAULT_MAX_FIELD_LENGTH,
   ruleYieldEvery = 0,
-  decode: DecodeSettings = { base64: false },
+  decode: DecodeSettings = { base64: false, url: false },
 ): ScanOptions {
   return {
     ruleYieldEvery,
@@ -450,9 +454,9 @@ function defaultScanOptions(
         maxFieldLength,
         memo: new Map<WafField, readonly string[]>(),
         memoLower: new Map<WafField, readonly string[]>(),
-        // Only carry the decode memos when decoding is actually on — an off
+        // Only carry the decode memos when a decoder is actually on — an off
         // config leaves the match path byte-for-byte the pre-decode behaviour.
-        ...(decode.base64
+        ...(decode.base64 || decode.url
           ? {
               decode,
               memoMatch: new Map<WafField, readonly string[]>(),

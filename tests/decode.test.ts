@@ -4,18 +4,21 @@ import { describe, expect, it } from 'vitest';
 import { createMiniWaf } from '@/engine/index';
 import {
   expandBase64Candidates,
+  expandUrlCandidates,
   extractJsonStringValues,
+  extractPathSegments,
 } from '@/engine/decode';
 import { createMockContext } from './helpers/mock-context';
 
 const b64 = (value: string): string => Buffer.from(value, 'utf8').toString('base64');
 
 describe('expandBase64Candidates', () => {
-  const on = { base64: true };
+  const on = { base64: true, url: false };
 
   it('returns the shared empty array when decoding is off', () => {
-    expect(expandBase64Candidates([b64('union select 1,2')], { base64: false }))
-      .toHaveLength(0);
+    expect(
+      expandBase64Candidates([b64('union select 1,2')], { base64: false, url: false }),
+    ).toHaveLength(0);
   });
 
   it('decodes a whole-value base64 blob back to its plaintext', () => {
@@ -28,8 +31,22 @@ describe('expandBase64Candidates', () => {
     expect(expandBase64Candidates(['YWJj'], on)).toHaveLength(0);
   });
 
-  it('ignores values whose length is not a multiple of four', () => {
-    expect(expandBase64Candidates(['YWJjZGVmZ2hpamtsbW4'], on)).toHaveLength(0);
+  it('decodes an unpadded base64 blob (length % 4 in {2, 3})', () => {
+    // Encoders like GoTestWAF Base64Flat emit no `=` padding, so the blob
+    // length is usually not a multiple of four. It must still decode.
+    const unpadded = b64('<body onload=alert(1)>').replace(/=+$/, '');
+    expect(unpadded.length % 4).not.toBe(0);
+    expect(expandBase64Candidates([unpadded], on)).toEqual([
+      '<body onload=alert(1)>',
+    ]);
+  });
+
+  it('rejects the one impossible base64 length (% 4 === 1)', () => {
+    // A remainder of 1 cannot be produced by valid Base64, so it is dropped
+    // before any decode attempt.
+    const bad = 'A'.repeat(17);
+    expect(bad.length % 4).toBe(1);
+    expect(expandBase64Candidates([bad], on)).toHaveLength(0);
   });
 
   it('ignores values carrying non-base64 characters (spaces, dots, dashes)', () => {
@@ -60,6 +77,36 @@ describe('expandBase64Candidates', () => {
   });
 });
 
+describe('expandUrlCandidates', () => {
+  const on = { base64: false, url: true };
+
+  it('returns the shared empty array when url decoding is off', () => {
+    expect(
+      expandUrlCandidates(['%3Cscript%3E'], { base64: false, url: false }),
+    ).toHaveLength(0);
+  });
+
+  it('percent-decodes a value that actually changes', () => {
+    expect(expandUrlCandidates(['%3Cimg%20src%3Dx%20onerror%3D1%3E'], on)).toEqual([
+      '<img src=x onerror=1>',
+    ]);
+  });
+
+  it('adds nothing for values without a percent escape', () => {
+    expect(expandUrlCandidates(['plain value', 'a=b&c=d'], on)).toHaveLength(0);
+  });
+
+  it('tolerates a malformed escape without throwing', () => {
+    // Lone `%` and `%ZZ` make decodeURIComponent throw — must be swallowed.
+    expect(expandUrlCandidates(['100% pure', 'bad %ZZ seq'], on)).toHaveLength(0);
+  });
+
+  it('caps the number of decoded candidates per call', () => {
+    const many = Array.from({ length: 40 }, (_, i) => `%3Cx${i}%3E`);
+    expect(expandUrlCandidates(many, on).length).toBeLessThanOrEqual(16);
+  });
+});
+
 describe('extractJsonStringValues', () => {
   it('pulls long string leaves from an object', () => {
     const blob = b64('1 UNION SELECT a FROM b');
@@ -82,6 +129,21 @@ describe('extractJsonStringValues', () => {
     expect(extractJsonStringValues('name=value&other=thing')).toHaveLength(0);
     expect(extractJsonStringValues('just some free text here')).toHaveLength(0);
     expect(extractJsonStringValues('{ not valid json')).toHaveLength(0);
+  });
+});
+
+describe('extractPathSegments', () => {
+  it('pulls a long path segment out for decoding', () => {
+    const blob = b64('<body onload=alert(1)> path payload');
+    expect(extractPathSegments(`/download/${blob}`)).toContain(blob);
+  });
+
+  it('drops short segments below the Base64 floor', () => {
+    expect(extractPathSegments('/a/b/c/short')).toHaveLength(0);
+  });
+
+  it('returns nothing for a path with no separator', () => {
+    expect(extractPathSegments('nolashere')).toHaveLength(0);
   });
 });
 
@@ -201,5 +263,93 @@ describe('engine base64 decode layer', () => {
         expect(result.decision).toBe('allow');
       });
     }
+  });
+});
+
+describe('engine url decode layer', () => {
+  // Fully percent-encode every byte so the raw form carries no recognizable
+  // attack token — only the url decoder can reach the plaintext, isolating the
+  // decode layer from rules that already match encoded shapes.
+  const fullEnc = (value: string): string =>
+    [...Buffer.from(value, 'utf8')]
+      .map((b) => `%${b.toString(16).padStart(2, '0')}`)
+      .join('');
+  const encodedSqli = fullEnc('1 UNION SELECT username, password FROM users');
+
+  it('does not decode at balanced (default off)', async () => {
+    const waf = createMiniWaf({ presets: ['default'], level: 'balanced' });
+    const { ctx } = createMockContext({ query: { q: encodedSqli } });
+    const result = await waf.handle(ctx);
+    expect(result.decision).toBe('allow');
+  });
+
+  it('auto-decodes at high and blocks the decoded SQLi', async () => {
+    const waf = createMiniWaf({ presets: ['default'], level: 'high' });
+    const { ctx } = createMockContext({ query: { q: encodedSqli } });
+    const result = await waf.handle(ctx);
+    expect(result.decision).toBe('block');
+    expect(result.matchedRule?.id).toMatch(/^preset-sqli/);
+  });
+
+  it('honours an explicit url override below high', async () => {
+    const waf = createMiniWaf({
+      presets: ['default'],
+      level: 'balanced',
+      decode: { url: true },
+    });
+    const { ctx } = createMockContext({ query: { q: encodedSqli } });
+    const result = await waf.handle(ctx);
+    expect(result.decision).toBe('block');
+  });
+
+  it('can be disabled explicitly at high', async () => {
+    const waf = createMiniWaf({
+      presets: ['default'],
+      level: 'high',
+      decode: { url: false },
+    });
+    const { ctx } = createMockContext({ query: { q: encodedSqli } });
+    const result = await waf.handle(ctx);
+    expect(result.decision).toBe('allow');
+  });
+
+  it('decodes a percent-encoded traversal on the URL path', async () => {
+    const waf = createMiniWaf({ presets: ['default'], level: 'high' });
+    // Encode only the payload tail so it lands as a path segment; the decoded
+    // `../../etc/passwd` is what the traversal preset catches.
+    const { ctx } = createMockContext({
+      path: `/download/${fullEnc('../../../etc/passwd')}`,
+    });
+    const result = await waf.handle(ctx);
+    expect(result.decision).toBe('block');
+  });
+
+  it('does not flag a benign percent-encoded path at high', async () => {
+    const waf = createMiniWaf({ presets: ['default'], level: 'high' });
+    const { ctx } = createMockContext({
+      path: '/api/v1/reports/2024%2Fq1%2Fsummary%20final.pdf',
+    });
+    const result = await waf.handle(ctx);
+    expect(result.decision).toBe('allow');
+  });
+
+  it('decodes a Base64 payload delivered as a path segment', async () => {
+    // The whole path `/download/<blob>` is not a Base64 blob (its `/` breaks the
+    // shape); only per-segment extraction reaches the encoded XSS.
+    const waf = createMiniWaf({ presets: ['default'], level: 'high' });
+    const blob = b64("<body onload=alert('test1')>");
+    const { ctx } = createMockContext({ path: `/download/${blob}` });
+    const result = await waf.handle(ctx);
+    expect(result.decision).toBe('block');
+  });
+
+  it('does not flag a benign opaque path segment at high', async () => {
+    // A long dashless-hex-ish asset segment must not trip once split out.
+    const waf = createMiniWaf({ presets: ['default'], level: 'high' });
+    const { ctx } = createMockContext({
+      path: '/assets/550e8400e29b41d4a716446655440000/logo.png',
+    });
+    const result = await waf.handle(ctx);
+    expect(result.decision).toBe('allow');
   });
 });
