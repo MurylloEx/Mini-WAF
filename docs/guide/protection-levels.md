@@ -22,6 +22,14 @@ Counts assume `presets: ['default']`. Cost tracks rule count roughly linearly,
 so the level is also your main performance dial — see
 [Performance](/guide/performance).
 
+`high` and `paranoid` also auto-enable **Base64 transport decoding**: a whole
+field value that is a single Base64 blob — a query/cookie value, or one JSON
+body value like `{"q":"<base64>"}` — is decoded and rescanned with the same
+rules, so an attack wrapped in Base64 can no longer slip a plaintext pattern.
+It is a new false-positive axis, so it stays off at `low`/`balanced`; override
+either way with `decode: { base64: true | false }`. See
+[Configuration](/guide/configuration) and [Performance](/guide/performance).
+
 ## Gating your own rules
 
 `minLevel` on a custom rule lets one config behave differently per environment:

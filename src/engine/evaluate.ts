@@ -13,8 +13,8 @@ import {
 } from '@/engine/matcher';
 import {
   resolveFieldJoined,
-  resolveFieldValues,
-  resolveFieldValuesLower,
+  resolveFieldMatchValues,
+  resolveFieldMatchValuesLower,
   type FieldResolveOptions,
 } from '@/engine/field-resolver';
 import type { RateLimitPort } from '@/engine/rate-limit';
@@ -45,7 +45,10 @@ function patternMatchesField(
   condition: FieldCondition,
   fields: FieldResolveOptions,
 ): boolean {
-  const values = resolveFieldValues(ctx, condition.field, fields);
+  // Match bag = raw field values plus any decoded extras (Base64 today). When
+  // decoding is off this is exactly the raw bag with one memo lookup — decoded
+  // variants never reach `equals` identity or rate-limit key material.
+  const values = resolveFieldMatchValues(ctx, condition.field, fields);
 
   // Prefer pre-lowercased needles (normalizeRules); still lower once here for
   // callers that pass raw conditions into evaluateCondition.
@@ -56,7 +59,7 @@ function patternMatchesField(
   const requires = condition.requires;
   const lowerValues =
     needleLower !== undefined || requires !== undefined
-      ? resolveFieldValuesLower(ctx, condition.field, fields)
+      ? resolveFieldMatchValuesLower(ctx, condition.field, fields)
       : undefined;
 
   return values.some((value, index) => {

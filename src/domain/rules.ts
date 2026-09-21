@@ -209,6 +209,18 @@ export interface WafConfig {
     readonly max?: number;
     readonly ttlMs?: number;
   };
+  /**
+   * Transport decoding. Decodes an encoded whole-value payload and rescans the
+   * decoded text with the **existing** rules, so encoders that wrap an attack
+   * in one blob (e.g. Base64) can no longer slip a plaintext regex.
+   *
+   * A new false-positive axis (benign Base64 that decodes to rule-matching
+   * text), so it is **off at `low`/`balanced` and auto-enabled at `high`+**.
+   * Set `base64` explicitly to override either way. Adds zero cost while off.
+   */
+  readonly decode?: {
+    readonly base64?: boolean;
+  };
 }
 
 export type WafDecision = 'allow' | 'block';

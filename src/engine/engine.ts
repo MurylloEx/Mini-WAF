@@ -9,7 +9,9 @@ import {
   DEFAULT_PROTECTION_LEVEL,
   DEFAULT_RULE_MIN_LEVEL,
   isLevelActive,
+  protectionLevelRank,
 } from '@/domain/levels';
+import type { DecodeSettings } from '@/engine/decode';
 import type { WafHttpContext } from '@/domain/context';
 import {
   evaluateCondition,
@@ -63,6 +65,7 @@ export interface ResolvedPerformance {
   readonly ruleYieldEvery: number;
   readonly maxRateLimitKeys: number;
   readonly decisionCache: ResolvedDecisionCache | undefined;
+  readonly decode: DecodeSettings;
 }
 
 export interface ResolvedWafConfig {
@@ -135,6 +138,17 @@ export function buildRuleList(config: WafConfig): readonly WafRule[] {
   );
 }
 
+/**
+ * Base64 transport-decode defaults off at `low`/`balanced` (zero added cost on
+ * the production-default tiers) and auto-on at `high`+, matching the leveling
+ * of the aggressive presets. An explicit `decode.base64` overrides either way.
+ */
+function resolveDecode(config: WafConfig): DecodeSettings {
+  const level = config.level ?? DEFAULT_PROTECTION_LEVEL;
+  const autoOn = protectionLevelRank(level) >= protectionLevelRank('high');
+  return { base64: config.decode?.base64 ?? autoOn };
+}
+
 function resolvePerformance(config: WafConfig): ResolvedPerformance {
   const decision = config.decisionCache;
   return {
@@ -148,6 +162,7 @@ function resolvePerformance(config: WafConfig): ResolvedPerformance {
             max: decision.max ?? DEFAULT_DECISION_CACHE_MAX,
             ttlMs: decision.ttlMs ?? DEFAULT_DECISION_CACHE_TTL_MS,
           },
+    decode: resolveDecode(config),
   };
 }
 
@@ -425,6 +440,7 @@ function defaultScanOptions(
   rateLimits: RateLimitPort,
   maxFieldLength = DEFAULT_MAX_FIELD_LENGTH,
   ruleYieldEvery = 0,
+  decode: DecodeSettings = { base64: false },
 ): ScanOptions {
   return {
     ruleYieldEvery,
@@ -434,6 +450,15 @@ function defaultScanOptions(
         maxFieldLength,
         memo: new Map<WafField, readonly string[]>(),
         memoLower: new Map<WafField, readonly string[]>(),
+        // Only carry the decode memos when decoding is actually on — an off
+        // config leaves the match path byte-for-byte the pre-decode behaviour.
+        ...(decode.base64
+          ? {
+              decode,
+              memoMatch: new Map<WafField, readonly string[]>(),
+              memoMatchLower: new Map<WafField, readonly string[]>(),
+            }
+          : {}),
       },
     },
   };
@@ -639,6 +664,7 @@ export function createWafEngine(
         rateLimitStore,
         resolved.performance.maxFieldLength,
         resolved.performance.ruleYieldEvery,
+        resolved.performance.decode,
       );
 
       if (decisionCache !== undefined && rulesById !== undefined) {

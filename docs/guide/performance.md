@@ -127,6 +127,12 @@ parameters is 6 runs, not 2. Two consequences:
 - `decisionCache` sidesteps the whole scan on a fingerprint hit, and is by far
   the cheapest win for traffic with repeated shapes (it is disabled
   automatically while a `rateLimit` rule is active).
+- `high`/`paranoid` auto-enable Base64 decoding. On clean traffic it adds a
+  memoized per-field shape check (~10–15 % of the high/paranoid scan) and
+  decodes only values that actually look like a Base64 blob; it is **off**, and
+  free, at `low`/`balanced`. A JSON body is parsed once (memoized) to expose its
+  string values to the same decoder, bounded in depth and count. Set
+  `decode: { base64: false }` to opt out.
 
 ## Regex caveats
 

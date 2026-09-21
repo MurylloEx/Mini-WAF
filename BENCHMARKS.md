@@ -44,6 +44,15 @@ Latencies in microseconds.
   (19 → 66 rules); `low` remains ~7 µs p50.
 - **A7-y0 ↔ A7-y32**: within noise on a 66-rule pack; the ~1ms yield budget
   does not trip on a clean paranoid scan.
+- **Base64 decode (`high`/`paranoid`)**: these levels auto-enable whole-value
+  Base64 decoding. On clean traffic (nothing decodes) it adds a per-field
+  memoized shape check — measured at roughly **+10–15 % of `A6-high` /
+  `A6-paranoid` cost**, and **zero** at `low`/`balanced` (the match path is
+  byte-for-byte identical when decoding is off). Decode work only runs when a
+  field value is actually a Base64 blob that survives the shape + printable
+  gates; a JSON body is additionally parsed once (memoized, depth/count
+  bounded) so its string values reach the same decoder. Set
+  `decode: { base64: false }` to opt out at high+.
 
 ## HTTP results (`B0`/`B1`, `C0`–`C3`)
 

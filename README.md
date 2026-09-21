@@ -205,6 +205,7 @@ Everything goes through `WafConfig` in `expressWaf(config)`, `fastifyWaf` (`conf
   ruleYieldEvery?: number;     // yield to event loop every N rules; default 32 (0 = off)
   maxRateLimitKeys?: number;   // LRU cap on distinct rate-limit keys; default 10000
   decisionCache?: { max?: number; ttlMs?: number }; // short-TTL decision LRU; off by default
+  decode?: { base64?: boolean }; // decode whole-value Base64 (+ JSON body values) and rescan; auto-on at high+
 }
 ```
 
@@ -216,6 +217,7 @@ Everything goes through `WafConfig` in `expressWaf(config)`, `fastifyWaf` (`conf
 | `ruleYieldEvery` | `32` | After every N rules, `handle` awaits `setImmediate` so large rule packs do not starve the event loop. Packs with fewer than N rules skip yielding (fully synchronous scan, still returns a `Promise`). Set `0` to always disable yielding. Safe together with `rateLimit` rules: counters live in a shared in-place store (no snapshot/replace race). |
 | `maxRateLimitKeys` | `10000` | Cap on distinct rate-limit keys (usually per-IP buckets). Cold keys are evicted LRU-style when the cap is exceeded; idle keys are also pruned opportunistically. Bounds memory/CPU under IP floods even when `preset-dos-rate-limit` is active. |
 | `decisionCache` | omitted (off) | Tiny LRU of allow/block decisions keyed by method + path + IP + query + UA + body hash. **Automatically disabled** when any active rule uses `rateLimit` so DoS counters still advance. Use only for mostly-static pattern rules; keep `max` / `ttlMs` small (defaults: 256 / 1000ms). |
+| `decode` | auto-on at `high`+ | Decodes a whole-value Base64 payload — a query/cookie value, or a single JSON body value like `{"q":"<base64>"}` — and rescans the plaintext with the existing rules, closing encoders that wrap an attack in Base64. A new false-positive axis (benign Base64 that decodes to rule-matching text), so it is **off at `low`/`balanced`** and adds zero cost there; set `{ base64: false }` to opt out at high+. Only values that survive a shape check **and** decode to mostly-printable text are rescanned, so tokens / UUIDs / image blobs are skipped. |
 
 Normalized client IPs are also memoized in a process-local LRU (max 2048) — the same idea as geo/IP caches in lightweight WAF tutorials, without an external `lru-cache` dependency.
 
