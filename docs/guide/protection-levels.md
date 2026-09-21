@@ -14,9 +14,9 @@ treated as `low`, i.e. active at every level.
 | Level | Rules (`default`) | Includes | Typical use | ≈ CRS PL |
 |-------|-------------------|----------|-------------|----------|
 | `low` | 19 | Obvious scanners (UA), classic SQLi + DBMS primitives, plain & encoded traversal / LFI, stream-wrapper RFI, PHP RCE, shell RCE, JNDI/Log4Shell, reverse shells, fetch-and-exec, Windows LOLBins, SSRF metadata | APIs sensitive to false positives | PL1 (core) |
-| `balanced` (default) | 45 | `low` + XSS (incl. encoded tags, `data:` URIs, attribute vectors), SQLi tautologies & `SELECT … FROM`, NoSQL operators, uploads & extension bypass, remote-URL RFI, SSTI, Node/lang exec, deserialization, null-byte, DoS rate-limit, protocol splitting/smuggling | General production | PL1–PL2 |
-| `high` | 61 | `balanced` + SSI, hex flood, prototype pollution, advanced & blind SQLi, XSS JS primitives, CL+TE, shell `$()`/`${IFS}`, session ID in URL | Under attack / broader coverage | PL2 |
-| `paranoid` | 67 | `high` + broad UAs, generic HTML tags, empty UA, shebang, oversized headers | Max coverage; more FPs | PL3–PL4 |
+| `balanced` (default) | 51 | `low` + XSS (incl. encoded tags, `data:` URIs, attribute vectors, path), SQLi tautologies & `SELECT … FROM`, NoSQL operators (quoted & unquoted), uploads & extension bypass, remote-URL RFI, SSTI, FreeMarker, Node/lang exec, deserialization (binary & YAML), null-byte, DoS rate-limit, protocol splitting/smuggling, encoded & double-encoded CRLF | General production | PL1–PL2 |
+| `high` | 78 | `balanced` + SSI, hex flood, prototype pollution, advanced/blind/boolean-equality/compact-subquery/JSON SQLi, NoSQL driver API, LDAP filter & matching-rule, XXE, mail command injection, UNC paths, XSS JS primitives, indirect & breakout sink calls, CL+TE, shell `$()`/`${IFS}`, session ID in URL | Under attack / broader coverage | PL2 |
+| `paranoid` | 89 | `high` + broad UAs, generic HTML tags, empty UA, shebang, oversized headers, internal-host SSRF, GraphQL introspection, ASP concat obfuscation, NoSQL `$where` time-bomb, CRLF-less mail verbs | Max coverage; more FPs | PL3–PL4 |
 
 Counts assume `presets: ['default']`. Cost tracks rule count roughly linearly,
 so the level is also your main performance dial — see

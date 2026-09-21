@@ -122,7 +122,7 @@ A rule costs one matcher run **per candidate value of each field it targets**.
 parameters is 6 runs, not 2. Two consequences:
 
 - Raising `level` raises cost roughly linearly. With `presets: ['default']` the
-  active rule count is 19 / 45 / 61 / 67 for `low` / `balanced` / `high` /
+  active rule count is 19 / 51 / 78 / 89 for `low` / `balanced` / `high` /
   `paranoid` — pick the lowest level that meets your threat model.
 - `decisionCache` sidesteps the whole scan on a fingerprint hit, and is by far
   the cheapest win for traffic with repeated shapes (it is disabled

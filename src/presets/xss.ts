@@ -3,7 +3,7 @@ import { PAYLOAD_FIELDS, anyFieldMatches } from '@/presets/fields';
 
 /** Inline script / handler injection shared by query, body and cookies. */
 const XSS_CORE =
-  /(<\s*script\b|(?:java|vb)script\s*:|on\w+\s*=|<\s*img\b[^>]*\bonerror\b|<\s*svg\b[^>]*\bonload\b|\bdocument\s*\.\s*(?:cookie|location|write(?:ln)?)\b)/i;
+  /(<\s*script\b|(?:java|vb)script\s*:|on\w+\s*=|<\s*img\b[^>]*\bonerror\b|<\s*svg\b[^>]*\bonload\b|\bdocument\s*(?:\?\.|\.)\s*(?:cookie|location|write(?:ln)?)\b)/i;
 
 /**
  * Percent- / entity- / unicode-encoded `<script`, i.e. a payload already
@@ -40,6 +40,24 @@ const GENERIC_HTML_TAG =
 
 const EVAL_ALERT = /\b(?:eval|alert|prompt|confirm)\s*\(/i;
 
+/**
+ * Indirect calls to a sink that evade the plain `alert(` pattern:
+ * `alert.call(0,1)`, `alert\`1\``, `alert?.(1)` (optional-chaining call),
+ * `(alert)(1)`. Higher signal than a bare `alert(`, so it can sit at `high`
+ * rather than `paranoid`.
+ */
+const XSS_INDIRECT_CALL =
+  /\b(?:alert|prompt|confirm|eval)\s*(?:\.\s*(?:call|apply|bind)\s*\(|\?\.\s*[(`]|`)|\(\s*(?:alert|prompt|confirm|eval)\s*\)\s*[`(]/i;
+
+/**
+ * A quote / bracket that breaks out of a JS string or attribute context and
+ * lands directly on a sink call — `'-alert(1)//`, `");eval(x)`. The breakout
+ * character before the sink is what keeps this off ordinary prose that merely
+ * mentions `alert`, so it is high signal and sits at `high`.
+ */
+const XSS_BREAKOUT_CALL =
+  /['"`]\s*[-+;,)}\]>]\s*(?:alert|prompt|confirm|eval)\s*(?:\?\.)?\s*[(`]/i;
+
 /** Reflected / stored XSS and SSI-style payloads. */
 export const xssRules: readonly WafRule[] = [
   {
@@ -59,7 +77,7 @@ export const xssRules: readonly WafRule[] = [
     when: {
       field: 'body',
       matches:
-        /(<\s*script\b|(?:java|vb)script\s*:|on\w+\s*=|<\s*img\b[^>]*\bonerror\b|\bdocument\s*\.\s*(?:cookie|write(?:ln)?)\b)/i,
+        /(<\s*script\b|(?:java|vb)script\s*:|on\w+\s*=|<\s*img\b[^>]*\bonerror\b|\bdocument\s*(?:\?\.|\.)\s*(?:cookie|write(?:ln)?)\b)/i,
     },
   },
   {
@@ -82,12 +100,20 @@ export const xssRules: readonly WafRule[] = [
     when: { field: 'cookies', matches: XSS_CORE },
   },
   {
+    id: 'preset-xss-path',
+    priority: 55,
+    action: 'block',
+    minLevel: 'balanced',
+    reason: 'Possible XSS in path',
+    when: { field: 'path', matches: XSS_CORE },
+  },
+  {
     id: 'preset-xss-encoded-tag',
     priority: 50,
     action: 'block',
     minLevel: 'balanced',
     reason: 'Encoded HTML tag used to evade XSS filtering',
-    when: anyFieldMatches(PAYLOAD_FIELDS, XSS_ENCODED_TAG, [
+    when: anyFieldMatches([...PAYLOAD_FIELDS, 'path'], XSS_ENCODED_TAG, [
       '%3c',
       '&lt;',
       '&#',
@@ -130,7 +156,11 @@ export const xssRules: readonly WafRule[] = [
     action: 'block',
     minLevel: 'high',
     reason: 'Possible SSI command injection',
-    when: anyFieldMatches(['query', 'body'], SSI_INJECTION, ['<!--#']),
+    when: anyFieldMatches(
+      ['query', 'body', 'path', 'cookies'],
+      SSI_INJECTION,
+      ['<!--#'],
+    ),
   },
   {
     id: 'preset-xss-js-primitives',
@@ -147,6 +177,32 @@ export const xssRules: readonly WafRule[] = [
     minLevel: 'paranoid',
     reason: 'Generic HTML tag in request (paranoid XSS)',
     when: anyFieldMatches(['query', 'body'], GENERIC_HTML_TAG, ['<']),
+  },
+  {
+    id: 'preset-xss-indirect-call',
+    priority: 55,
+    action: 'block',
+    minLevel: 'high',
+    reason: 'Possible XSS via indirect sink call (call/apply/optional chaining)',
+    when: anyFieldMatches(PAYLOAD_FIELDS, XSS_INDIRECT_CALL, [
+      'alert',
+      'prompt',
+      'confirm',
+      'eval',
+    ]),
+  },
+  {
+    id: 'preset-xss-breakout-call',
+    priority: 55,
+    action: 'block',
+    minLevel: 'high',
+    reason: 'Possible XSS breakout from a string/attribute into a sink call',
+    when: anyFieldMatches(PAYLOAD_FIELDS, XSS_BREAKOUT_CALL, [
+      'alert',
+      'prompt',
+      'confirm',
+      'eval',
+    ]),
   },
   {
     id: 'preset-xss-eval-alert',

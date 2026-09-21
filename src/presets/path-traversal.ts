@@ -1,5 +1,9 @@
 import type { WafRule } from '@/domain/rules';
-import { PAYLOAD_PATH_FIELDS, anyFieldMatches } from '@/presets/fields';
+import {
+  PAYLOAD_PATH_FIELDS,
+  URL_FIELDS,
+  anyFieldMatches,
+} from '@/presets/fields';
 
 /** Classic `../` and encoded variants (CRS 930100/110 simplified). */
 const PATH_TRAVERSAL = /(\.\.(\/|\\)|\.\.%(2[fF]|5[cC])|\.\.;(?:\/|\\))+/;
@@ -13,7 +17,7 @@ const PATH_TRAVERSAL = /(\.\.(\/|\\)|\.\.%(2[fF]|5[cC])|\.\.;(?:\/|\\))+/;
  * means the client double-encoded it.
  */
 const ENCODED_TRAVERSAL =
-  /%(?:25)?2[eE]%(?:25)?2[eE]|\.%(?:25)?2[eE]|%(?:25)?2[eE]\.|%c0%a[ef]|%c1%9c|%e0%80%a[ef]|%u2216|%uff0e/i;
+  /%(?:25)?2[eE]%(?:25)?2[eE]|\.%(?:25)?2[eE]|%(?:25)?2[eE]\.|%c0%a[ef]|%c1%9c|%e0%80%a[ef]|%f0%80%80%a[ef]|%c0%2[eEfF]|%u2216|%uff0e/i;
 
 /**
  * Sensitive OS / app paths often probed in LFI (CRS 930120/130 subset).
@@ -21,6 +25,15 @@ const ENCODED_TRAVERSAL =
  */
 const OS_FILE_ACCESS =
   /(?:\/etc\/(?:passwd|shadow|hosts|issue|crontab)|(?:^|[\\/])(?:boot|win)\.ini\b|\/proc\/(?:self|version)|\/windows\/system32\/|\\windows\\system32\\)/i;
+
+/**
+ * Windows UNC / administrative-share path — `\\host\c$\…`, `\\?\`, `admin$`,
+ * or its percent-encoded `%5c%5c…%5c` form. Scanned on URL-borne fields only
+ * (never the body), because a raw request body routinely carries `\\` as JSON
+ * escaping of a single backslash, which is not a UNC path.
+ */
+const UNC_PATH =
+  /\\\\[\w.$-]{1,60}\\[\w$.]|%5c%5c[\w.%]{1,60}%5c|\\\\\?\\|\b[a-zA-Z]\$\\|\badmin\$/i;
 
 /** VCS / secrets / backup files in the path (CRS 930130-ish). */
 const RESTRICTED_PATH =
@@ -66,6 +79,14 @@ export const pathTraversalRules: readonly WafRule[] = [
       '/proc/',
       'system32',
     ]),
+  },
+  {
+    id: 'preset-lfi-unc-path',
+    priority: 48,
+    action: 'block',
+    minLevel: 'high',
+    reason: 'Possible UNC / administrative-share path access',
+    when: anyFieldMatches(URL_FIELDS, UNC_PATH, ['\\', '%5c', '$']),
   },
   {
     id: 'preset-lfi-restricted-files',

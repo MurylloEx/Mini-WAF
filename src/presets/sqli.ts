@@ -1,5 +1,6 @@
 import type { WafRule } from '@/domain/rules';
 import {
+  PAYLOAD_FIELDS,
   PAYLOAD_PATH_FIELDS,
   URL_FIELDS,
   anyFieldMatches,
@@ -31,7 +32,7 @@ const SQLI_DBMS_PRIMITIVES =
  * (CRS 942500). Scanned on URL-borne fields only: minified JavaScript keeps
  * `/*!` license banners, so bodies would false-positive.
  */
-const SQLI_VERSIONED_COMMENT = /\/\*!(?:\d{5})?/;
+const SQLI_VERSIONED_COMMENT = /\/\*!(?:\d{5})?|\/\*%21/i;
 
 /**
  * Quoted tautologies that the numeric `OR 1=1` pattern misses:
@@ -47,12 +48,61 @@ const SQLI_TAUTOLOGY =
 const SQLI_SELECT_FROM = /\bSELECT\b[\s\S]{1,160}?\bFROM\b\s*[\w."`[]/i;
 
 /**
+ * Whitespace-free nested subquery — `(select(0)from(select(sleep(1)))x)`,
+ * `union select(1)from(users)`. {@link SQLI_SELECT_FROM} needs a word / quote
+ * after `FROM`; the tight `from(` form puts a paren there instead and slips
+ * past it. Kept at `high`: a `select(…)from(` shape can appear in posted SQL.
+ */
+const SQLI_COMPACT_SUBQUERY = /\bselect\s*\([\s\S]{0,80}?\bfrom\s*\(/i;
+
+/**
+ * MySQL / MariaDB JSON accessors used to read data during injection
+ * (`JSON_EXTRACT(`, `JSON_KEYS(`, `JSON_ARRAYAGG(` …). These need no `FROM`,
+ * so {@link SQLI_SELECT_FROM} never sees them. Kept at `high`: `json_*` tokens
+ * can surface in ORM logs or SQL-adjacent prose.
+ */
+const SQLI_JSON_FUNCTION =
+  /\bjson_(?:extract|keys|depth|contains(?:_path)?|search|value|query|arrayagg|objectagg|table|valid|unquote|length|overlaps|storage_(?:size|free)|merge(?:_preserve|_patch)?)\s*\(/i;
+
+/**
+ * MongoDB driver / shell method calls in request input —
+ * `db.users.find({$where…})`, `db.coll.aggregate(`. A JS-object payload that
+ * carries no `$operator` string still exposes the driver call. Kept at `high`:
+ * code-sharing apps may legitimately post this.
+ */
+const NOSQL_DRIVER_API =
+  /\bdb\.\w{1,40}\.(?:find(?:One)?(?:AndModify|AndUpdate|AndDelete|AndReplace)?|insert(?:One|Many)?|update(?:One|Many)?|delete(?:One|Many)?|replaceOne|remove|save|aggregate|mapReduce|count(?:Documents)?|distinct|bulkWrite)\s*\(/i;
+
+/**
  * MongoDB / NoSQL operator injection — the classic `{"$ne": null}` auth
  * bypass, in JSON body form and in the bracketed query-string form that
  * Express' extended parser produces (CRS 942290).
  */
 const NOSQL_OPERATOR =
   /(?:["']\s*\$(?:where|ne|gt|gte|lt|lte|regex|expr|function|nin|in|all|elemMatch|jsonSchema)\s*["']\s*:|\[\s*\$(?:where|ne|gt|gte|lt|lte|regex|expr|function)\s*\]|(?:^|[&[])\$(?:where|ne|gt|gte|lt|lte|regex|expr|function)\s*[=\]])/i;
+
+/**
+ * NoSQL operator injection in bare (unquoted) form — `$where: '…'`,
+ * `, $or: [`, `{$gt: ''}`. {@link NOSQL_OPERATOR} only matches a *quoted*
+ * `"$ne":` key or a bracketed `[$ne]`; MongoDB-shell / JS-object payloads and
+ * their query-string variants drop the quotes, so they need their own arm.
+ * The leading `[,{[(]` (or start of value for `$where:`) keeps ordinary
+ * `${var}` template interpolation — where `$` is followed by `{`, not preceded
+ * by a bracket — from matching.
+ */
+const NOSQL_STRING =
+  /\$where\s*:|(?:^|[,{[(])\s*\$(?:or|and|nor|not|gt|gte|lt|lte|ne|nin|in|regex|expr|function|elemMatch|jsonSchema)\s*:/i;
+
+/**
+ * Keyword-free numeric boolean test — `AND 1=1`, `OR 6522=6522`,
+ * `123) AND 12=12`. {@link SQLI_CLASSIC} only covers `OR <n>=<n>` separated by
+ * whitespace; sqlmap's default boolean-blind probe and GoTestWAF's `) AND n=n`
+ * payloads use `AND` or a tight closing paren and carry no quote or SQL
+ * keyword, so every other arm misses them. Kept at `high`: a bare `n=n` after
+ * `and`/`or` can surface in free-form or mathematical text.
+ */
+const SQLI_BOOLEAN_EQUALITY =
+  /\b(?:AND|OR|XOR)\b\s*\(?\s*\d{1,6}\s*(?:=|!=|<=>|>=|<=)\s*\d{1,6}/i;
 
 /**
  * Blind / boolean / enumeration structure probes (CRS 942130 / 942210).
@@ -62,6 +112,15 @@ const NOSQL_OPERATOR =
  */
 const SQLI_BLIND =
   /(?:\b(?:ORDER|GROUP)\s+BY\s+\d{1,4}\s*(?:--|#|;|\/\*|\)|$)|\bHAVING\b\s*\d{1,4}\s*=\s*\d{1,4}|\bCASE\s+WHEN\b[\s\S]{0,80}?\bTHEN\b|\b(?:AND|OR)\s*\(\s*SELECT\b|\bIF\s*\(\s*(?:\d{1,4}\s*[=<>]|ASCII\s*\(|SUBSTR)|\bCHAR\s*\(\s*\d{1,3}(?:\s*,\s*\d{1,3}){3,}\s*\)|['"`]\s*\)*\s*(?:;\s*)?--(?:\s|$))/i;
+
+/**
+ * MongoDB `$where` JavaScript denial of service — an infinite `while(true)` /
+ * `for(;;)` busy loop smuggled into a server-side predicate. `paranoid`: a
+ * posted code snippet can carry the same loop, and the prefilter (`while` /
+ * `for(`) keeps the regex off every clean request.
+ */
+const NOSQL_TIMEBOMB =
+  /\bwhile\s*\(\s*(?:true|1|!0|0x1)\s*\)|\bfor\(\s*;\s*;\s*\)/i;
 
 function sqliFieldRules(
   field: 'query' | 'body' | 'path' | 'cookies',
@@ -114,7 +173,7 @@ export const sqliRules: readonly WafRule[] = [
     action: 'block',
     minLevel: 'low',
     reason: 'MySQL versioned comment used to obfuscate SQL',
-    when: anyFieldMatches(URL_FIELDS, SQLI_VERSIONED_COMMENT, ['/*!']),
+    when: anyFieldMatches(URL_FIELDS, SQLI_VERSIONED_COMMENT, ['/*!', '/*%21']),
   },
   {
     id: 'preset-sqli-tautology',
@@ -141,11 +200,59 @@ export const sqliRules: readonly WafRule[] = [
     when: anyFieldMatches(PAYLOAD_PATH_FIELDS, NOSQL_OPERATOR, ['$']),
   },
   {
+    id: 'preset-sqli-nosql-string',
+    priority: 50,
+    action: 'block',
+    minLevel: 'balanced',
+    reason: 'Possible NoSQL operator injection (unquoted form)',
+    when: anyFieldMatches(PAYLOAD_PATH_FIELDS, NOSQL_STRING, ['$']),
+  },
+  {
+    id: 'preset-sqli-boolean-equality',
+    priority: 52,
+    action: 'block',
+    minLevel: 'high',
+    reason: 'Possible boolean-based blind SQL injection (numeric equality)',
+    when: anyFieldMatches(PAYLOAD_PATH_FIELDS, SQLI_BOOLEAN_EQUALITY, ['=']),
+  },
+  {
+    id: 'preset-sqli-compact-subquery',
+    priority: 52,
+    action: 'block',
+    minLevel: 'high',
+    reason: 'Possible SQL injection via whitespace-free nested subquery',
+    when: anyFieldMatches(URL_FIELDS, SQLI_COMPACT_SUBQUERY, ['select']),
+  },
+  {
+    id: 'preset-sqli-json-functions',
+    priority: 52,
+    action: 'block',
+    minLevel: 'high',
+    reason: 'Possible SQL injection using JSON accessor functions',
+    when: anyFieldMatches(PAYLOAD_PATH_FIELDS, SQLI_JSON_FUNCTION, ['json_']),
+  },
+  {
+    id: 'preset-sqli-nosql-driver-api',
+    priority: 52,
+    action: 'block',
+    minLevel: 'high',
+    reason: 'Possible NoSQL injection via MongoDB driver API call',
+    when: anyFieldMatches(['query', 'body'], NOSQL_DRIVER_API, ['db.']),
+  },
+  {
     id: 'preset-sqli-blind',
     priority: 52,
     action: 'block',
     minLevel: 'high',
     reason: 'Possible blind / enumeration SQL injection',
     when: anyFieldMatches(PAYLOAD_PATH_FIELDS, SQLI_BLIND),
+  },
+  {
+    id: 'preset-sqli-nosql-timebomb',
+    priority: 54,
+    action: 'block',
+    minLevel: 'paranoid',
+    reason: 'Possible NoSQL $where JavaScript denial-of-service loop',
+    when: anyFieldMatches(PAYLOAD_FIELDS, NOSQL_TIMEBOMB, ['while', 'for(']),
   },
 ];

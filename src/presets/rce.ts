@@ -12,7 +12,7 @@ import { PAYLOAD_FIELDS, anyFieldMatches } from '@/presets/fields';
  *    **and** an argument after it.
  */
 const UNIX_CMD_INJECTION =
-  /(?:[;`\n]|\$\(|&&|\|\|)\s*\/?(?:\w+\/)*(?:cat|chmod|chown|curl|wget|bash|dash|zsh|sh|nc|ncat|netcat|python[23]?|perl|ruby|php|id|whoami|uname|ls|rm|kill|sleep|ping|telnet|ftp|busybox|xterm|crontab|nohup)\b|\|\s*\/?(?:\w+\/)*(?:chmod|chown|curl|wget|nc|ncat|netcat|whoami|uname|busybox|xterm|telnet|crontab|nohup|bash|sh|python[23]?|perl)\s+[-\w'"/]/i;
+  /(?:[;`\n]|\$\(|&&|\|\|)\s*\/?(?:\w+\/)*(?:cat|chmod|chown|curl|wget|bash|dash|zsh|sh|nc|ncat|netcat|python[23]?|perl|ruby|php|id|whoami|uname|ls|rm|kill|sleep|ping|telnet|ftp|busybox|xterm|crontab|nohup|getent|dig|nslookup)\b|\|\s*\/?(?:\w+\/)*(?:chmod|chown|curl|wget|nc|ncat|netcat|whoami|uname|busybox|xterm|telnet|crontab|nohup|bash|sh|python[23]?|perl|getent)\s+[-\w'"/]/i;
 
 /** PowerShell / cmd.exe probes (CRS 932). */
 const WINDOWS_RCE =
@@ -52,6 +52,23 @@ const SSTI =
 const SSRF_METADATA =
   /(?:169\.254\.169\.254|metadata\.google\.internal|100\.100\.100\.200|192\.0\.0\.192|instance-data\/latest|computeMetadata\/v1|169\.254\.170\.2\/v2)/i;
 
+/**
+ * SSRF to a private (RFC 1918) / loopback host through a URL scheme —
+ * `http://127.0.0.1`, `gopher://10.0.0.5`, `dict://192.168.1.1`. `paranoid`:
+ * legitimate internal webhooks and dev callbacks look the same, so this only
+ * runs at the highest tier; the `://` prefilter keeps it off ordinary values.
+ */
+const SSRF_INTERNAL =
+  /\b(?:https?|ftp|gopher|dict|ldap):\/\/(?:[^/\s@]{0,80}@)?(?:127\.\d{1,3}\.\d{1,3}\.\d{1,3}|0\.0\.0\.0|localhost|\[?::1\]?|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})/i;
+
+/**
+ * VBScript / ASP string-concatenation obfuscation — `Ex"&"e"&"cute`,
+ * `e'+'v'+'al` — rebuilding a keyword past a literal filter. Two or more
+ * adjacent quote-operator-quote groups. `paranoid`: ordinary quoted text can
+ * carry `"&"`, so the tight `"&"` / `"+"` prefilter is what makes it cheap.
+ */
+const ASP_STRING_CONCAT = /(?:["'][&+]["'][a-z0-9]{0,3}){2,}/i;
+
 /** Node.js `child_process` / dynamic `require` injection. */
 const NODE_RCE =
   /\brequire\s*\(\s*['"]child_process['"]|\bchild_process\b[\s\S]{0,40}\b(?:exec(?:Sync)?|spawn(?:Sync)?)\s*\(/i;
@@ -77,6 +94,23 @@ const SHELL_EXPANSION =
 
 /** Fork bomb. */
 const FORK_BOMB = /:\(\)\s*\{\s*:\s*\|\s*:\s*&\s*\}\s*;?\s*:/;
+
+/**
+ * FreeMarker template injection — `<#assign … = …?new(…)>`, the
+ * `freemarker.template.utility.Execute` gadget, `<@…>` user directives. None
+ * of these directive tokens has a legitimate meaning in request input.
+ */
+const FREEMARKER =
+  /<#\s*(?:assign|list|if|include|import|macro|function|global|local|setting)\b|freemarker\.template\.utility\.(?:Execute|ObjectConstructor)|\?\s*new\s*\(\s*["'][\w.]*(?:Execute|ObjectConstructor)/i;
+
+/**
+ * Unsafe deserialization tags for Python (PyYAML) and Ruby YAML —
+ * `!!python/object/apply:os.system`, `!!python/object/new:`, `--- !ruby/object`.
+ * The `safe_load` path never emits these, so their presence in input is a
+ * gadget-chain probe.
+ */
+const YAML_UNSAFE_TAG =
+  /!!python\/(?:object|module|name)\b|!ruby\/(?:object|hash|struct|marshal|range)\b|!!(?:java|javax)\./i;
 
 const PAYLOAD_AND_HEADERS = [...PAYLOAD_FIELDS, 'headers'] as const;
 const PAYLOAD_AND_PATH = [...PAYLOAD_FIELDS, 'path'] as const;
@@ -108,7 +142,7 @@ export const rceRules: readonly WafRule[] = [
     action: 'block',
     minLevel: 'low',
     reason: 'Possible Unix command injection',
-    when: anyFieldMatches(PAYLOAD_FIELDS, UNIX_CMD_INJECTION, [
+    when: anyFieldMatches(PAYLOAD_AND_PATH, UNIX_CMD_INJECTION, [
       ';',
       '`',
       '\n',
@@ -199,7 +233,23 @@ export const rceRules: readonly WafRule[] = [
     action: 'block',
     minLevel: 'balanced',
     reason: 'Possible server-side template injection',
-    when: anyFieldMatches(PAYLOAD_FIELDS, SSTI, ['{{', '#{', '<%']),
+    when: anyFieldMatches(PAYLOAD_AND_PATH, SSTI, ['{{', '#{', '<%']),
+  },
+  {
+    id: 'preset-rce-freemarker',
+    priority: 50,
+    action: 'block',
+    minLevel: 'balanced',
+    reason: 'Possible FreeMarker template injection',
+    when: anyFieldMatches(PAYLOAD_AND_PATH, FREEMARKER, ['<#', 'freemarker', '?new']),
+  },
+  {
+    id: 'preset-rce-yaml-deserialization',
+    priority: 52,
+    action: 'block',
+    minLevel: 'balanced',
+    reason: 'Possible unsafe YAML deserialization (Python / Ruby / Java tag)',
+    when: anyFieldMatches(PAYLOAD_FIELDS, YAML_UNSAFE_TAG, ['!!python', '!ruby/', '!!java', '!!javax']),
   },
   {
     id: 'preset-rce-nodejs',
@@ -253,5 +303,26 @@ export const rceRules: readonly WafRule[] = [
     minLevel: 'high',
     reason: 'Possible shell fork bomb',
     when: anyFieldMatches(PAYLOAD_FIELDS, FORK_BOMB, [':(']),
+  },
+  {
+    id: 'preset-ssrf-internal',
+    priority: 58,
+    action: 'block',
+    minLevel: 'paranoid',
+    reason: 'Possible SSRF to a private / loopback host',
+    when: anyFieldMatches(PAYLOAD_AND_PATH, SSRF_INTERNAL, ['://']),
+  },
+  {
+    id: 'preset-rce-asp-concat',
+    priority: 58,
+    action: 'block',
+    minLevel: 'paranoid',
+    reason: 'Possible ASP / VBScript string-concatenation obfuscation',
+    when: anyFieldMatches(PAYLOAD_FIELDS, ASP_STRING_CONCAT, [
+      '"&"',
+      "'&'",
+      '"+"',
+      "'+'",
+    ]),
   },
 ];

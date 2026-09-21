@@ -14,7 +14,7 @@ export const protocolRules: readonly WafRule[] = [
     minLevel: 'balanced',
     reason: 'Possible HTTP response splitting',
     when: anyFieldMatches(
-      ['query', 'body', 'cookies'],
+      ['query', 'body', 'cookies', 'path'],
       /[\r\n][^0-9A-Za-z_]*?(?:content-(?:type|length)|set-cookie|location)\s*:/i,
       ['\r', '\n'],
     ),
@@ -38,6 +38,42 @@ export const protocolRules: readonly WafRule[] = [
       matches: /[\r\n]/,
       requires: ['\r', '\n'],
     },
+  },
+  {
+    id: 'preset-protocol-crlf-encoded-path',
+    priority: 45,
+    action: 'block',
+    minLevel: 'balanced',
+    reason: 'Percent-encoded CR/LF in path or URL (response splitting)',
+    when: anyFieldMatches(
+      ['path', 'url'],
+      /%0[dD]%0[aA]|%0[aA]%0[dD]|%0[aAdD][^&#]{0,64}?(?:set-cookie|content-(?:type|length|disposition)|location|refresh)\s*:/i,
+      ['%0'],
+    ),
+  },
+  {
+    id: 'preset-protocol-crlf-double-encoded',
+    priority: 45,
+    action: 'block',
+    minLevel: 'balanced',
+    reason: 'Double-encoded or overlong CR/LF in path or URL',
+    when: anyFieldMatches(
+      ['path', 'url'],
+      /%25(?:25)*(?:0[dDaA]|30[dDaA]|3[45])|%25%30%4[14]|%c0%8[aAdD]|%e0%80%8[aAdD]|%e5%98%8[aAdD]|%u000[aAdD]/i,
+      ['%25', '%c0', '%e0', '%e5', '%u00'],
+    ),
+  },
+  {
+    id: 'preset-protocol-mail-command',
+    priority: 45,
+    action: 'block',
+    minLevel: 'high',
+    reason: 'Possible SMTP / IMAP command injection via CR/LF',
+    when: anyFieldMatches(
+      ['query', 'body', 'cookies'],
+      /(?:[\r\n]|%0[aAdD]){1,3}\s*(?:RCPT\s+TO|MAIL\s+FROM|EHLO|HELO|AUTH\s+LOGIN|STARTTLS|CAPABILITY|BDAT)\b/i,
+      ['\r', '\n', '%0'],
+    ),
   },
   {
     id: 'preset-protocol-header-injection',
@@ -105,6 +141,18 @@ export const protocolRules: readonly WafRule[] = [
         '_session_id',
       ],
     },
+  },
+  {
+    id: 'preset-protocol-mail-verb',
+    priority: 46,
+    action: 'block',
+    minLevel: 'paranoid',
+    reason: 'SMTP / IMAP command verb in request input',
+    when: anyFieldMatches(
+      ['query', 'body'],
+      /\bRCPT\s+TO\s*:|\bMAIL\s+FROM\s*:|\bEHLO\s+[\w.-]|\bHELO\s+[\w.-]|\bAUTH\s+LOGIN\b/i,
+      ['rcpt', 'mail from', 'ehlo', 'helo', 'auth login'],
+    ),
   },
   {
     id: 'preset-protocol-empty-ua',
