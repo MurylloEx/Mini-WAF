@@ -269,13 +269,13 @@ Individual presets: `'sqli' | 'xss' | 'scanners' | 'path-traversal' | 'rfi' | 'r
 
 | Preset | Rules | Focus (CRS-derived) |
 |--------|-------|---------------------|
-| `sqli` | 14 | REQUEST-942 — classic, tautology, DBMS primitives, blind, NoSQL operators |
-| `xss` | 11 | REQUEST-941 (+ SSI) — tags, encoded tags, `data:` URIs, attribute vectors, JS primitives |
-| `scanners` | 9 | REQUEST-913 / 912 (UA, DoS rate) |
-| `path-traversal` | 4 | REQUEST-930 — plain and encoded traversal, LFI |
-| `rfi` | 6 | REQUEST-931 / 933 — stream wrappers, remote script include, PHP RCE, uploads |
-| `rce` | 14 | REQUEST-932 / 934 — shell, JNDI/Log4Shell, reverse shells, LOLBins, SSTI, deserialization |
-| `protocol` | 9 | REQUEST-920 / 921 / 943 |
+| `sqli` | 22 | REQUEST-942 — classic, tautology, DBMS primitives, blind, boolean equality, compact subquery, JSON functions, MSSQL `DECLARE`, NoSQL operators / driver API / `$where` DoS |
+| `xss` | 14 | REQUEST-941 (+ SSI) — tags, encoded tags, `data:` URIs, attribute vectors, JS primitives, indirect & breakout sink calls |
+| `scanners` | 12 | REQUEST-913 / 912 — scanner UAs, LDAP filter & matching-rule, GraphQL introspection, null-byte, pollution, hex flood, DoS rate |
+| `path-traversal` | 5 | REQUEST-930 — plain and encoded traversal, UNC / admin-share paths, LFI |
+| `rfi` | 7 | REQUEST-931 / 933 — stream wrappers, remote script include, PHP RCE, XXE, uploads |
+| `rce` | 19 | REQUEST-932 / 934 — shell (incl. `set /a`), JNDI/Log4Shell, reverse shells, LOLBins, SSTI, FreeMarker, deserialization |
+| `protocol` | 15 | REQUEST-920 / 921 / 943 — splitting, smuggling, CRLF, mail / IMAP / QUIT injection, header injection, CL+TE, Host IP, session |
 
 The per-rule breakdown, with what each id catches, is in
 [the presets guide](https://murylloex.github.io/Mini-WAF/guide/presets).
