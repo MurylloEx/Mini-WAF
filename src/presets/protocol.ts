@@ -76,6 +76,40 @@ export const protocolRules: readonly WafRule[] = [
     ),
   },
   {
+    id: 'preset-protocol-imap-command',
+    priority: 45,
+    action: 'block',
+    minLevel: 'high',
+    reason: 'Possible IMAP command injection via CR/LF',
+    // Real IMAP client traffic is `<tag> COMMAND`, where the tag is a short
+    // alphanumeric counter (`V100`, `a001`, `*`). The anchored
+    // `preset-protocol-mail-command` never sees these because the tag sits
+    // between the CR/LF and the verb. Requiring a *digit-bearing* tag after the
+    // CR/LF keeps ordinary multi-line prose ("...\nplease fetch the file") out,
+    // and the verb list is limited to non-English IMAP keywords. `high`: mail /
+    // IMAP header injection is inherently FP-prone on free-text form fields.
+    when: anyFieldMatches(
+      ['query', 'body', 'cookies'],
+      /(?:[\r\n]|%0[aAdD]){1,3}[ \t]*(?:[A-Za-z0-9]*\d[A-Za-z0-9]*|\*)[ \t]+(?:CAPABILITY|FETCH|LOGIN|LOGOUT|STARTTLS|AUTHENTICATE|NAMESPACE|LSUB|EXPUNGE|UID)\b/i,
+      ['\r', '\n', '%0'],
+    ),
+  },
+  {
+    id: 'preset-protocol-mail-teardown',
+    priority: 46,
+    action: 'block',
+    minLevel: 'high',
+    reason: 'Possible mail session teardown (QUIT) via CR/LF',
+    // `\r\nQUIT\r\n` as sent to SMTP / POP3 / IMAP. `QUIT` is an English word,
+    // so it only matches when it is the *entire* line (CR/LF or end on both
+    // sides), never mid-sentence ("please quit smoking").
+    when: anyFieldMatches(
+      ['query', 'body', 'cookies'],
+      /(?:[\r\n]|%0[aAdD])[ \t]*QUIT[ \t]*(?:[\r\n]|%0[aAdD]|$)/i,
+      ['quit'],
+    ),
+  },
+  {
     id: 'preset-protocol-header-injection',
     priority: 45,
     action: 'block',

@@ -184,7 +184,7 @@ export const xssRules: readonly WafRule[] = [
     action: 'block',
     minLevel: 'high',
     reason: 'Possible XSS via indirect sink call (call/apply/optional chaining)',
-    when: anyFieldMatches(PAYLOAD_FIELDS, XSS_INDIRECT_CALL, [
+    when: anyFieldMatches([...PAYLOAD_FIELDS, 'path'], XSS_INDIRECT_CALL, [
       'alert',
       'prompt',
       'confirm',
@@ -197,7 +197,7 @@ export const xssRules: readonly WafRule[] = [
     action: 'block',
     minLevel: 'high',
     reason: 'Possible XSS breakout from a string/attribute into a sink call',
-    when: anyFieldMatches(PAYLOAD_FIELDS, XSS_BREAKOUT_CALL, [
+    when: anyFieldMatches([...PAYLOAD_FIELDS, 'path'], XSS_BREAKOUT_CALL, [
       'alert',
       'prompt',
       'confirm',

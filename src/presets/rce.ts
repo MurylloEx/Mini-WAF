@@ -19,6 +19,16 @@ const WINDOWS_RCE =
   /\b(?:cmd(?:\.exe)?\b[^&\n|]*\s\/[ck]\b|powershell(?:\.exe)?\b[^&\n|]*-(?:encodedcommand|e(?:c)?|command|c)\b|invoke-expression\b|\biex\s*\()/i;
 
 /**
+ * cmd.exe built-in used as an injection primitive — `set /a 3482*7301`
+ * (arithmetic evaluation) and `set /p x=` (prompt-driven input). Delivered
+ * behind a separator (`| set /a …`), it probes command execution without any
+ * external binary. `paranoid`: `set` is an ordinary word and only the `/a` /
+ * `/p` switch makes it a cmd primitive, so the highest-FP tier owns it.
+ */
+const WINDOWS_CMD_SET =
+  /\bset\s+\/[ap]\b/i;
+
+/**
  * Living-off-the-land Windows binaries used to stage a payload (CRS 932).
  * Each arm requires the flag that makes the binary dangerous, so ordinary
  * text mentioning `certutil` or `rundll32` does not match.
@@ -311,6 +321,14 @@ export const rceRules: readonly WafRule[] = [
     minLevel: 'paranoid',
     reason: 'Possible SSRF to a private / loopback host',
     when: anyFieldMatches(PAYLOAD_AND_PATH, SSRF_INTERNAL, ['://']),
+  },
+  {
+    id: 'preset-rce-windows-cmd-set',
+    priority: 58,
+    action: 'block',
+    minLevel: 'paranoid',
+    reason: 'Possible cmd.exe injection via set /a or set /p',
+    when: anyFieldMatches(PAYLOAD_AND_PATH, WINDOWS_CMD_SET, ['set']),
   },
   {
     id: 'preset-rce-asp-concat',

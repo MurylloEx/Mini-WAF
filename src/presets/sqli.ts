@@ -122,6 +122,32 @@ const SQLI_BLIND =
 const NOSQL_TIMEBOMB =
   /\bwhile\s*\(\s*(?:true|1|!0|0x1)\s*\)|\bfor\(\s*;\s*;\s*\)/i;
 
+/**
+ * MongoDB `$where` *timing* denial-of-service — a busy-wait that spins until a
+ * wall-clock delta elapses: `var d = new Date(); do{ c = new Date(); }while(c-d
+ * < 10000)`. {@link NOSQL_TIMEBOMB} only matches the infinite `while(true)` /
+ * `for(;;)` forms; this loop carries a *real* condition (`c - d`), so it needs
+ * its own arm. The signature is a `new Date()` read feeding a subtraction
+ * inside a loop condition. `high` (not `paranoid` like {@link NOSQL_TIMEBOMB}):
+ * GoTestWAF exercises it at that level, and the two-`Date()` + `while(a - b)`
+ * shape is characteristic enough — a posted benchmark snippet is the only
+ * realistic collision, and the `new date` prefilter keeps the regex off every
+ * clean request.
+ */
+const NOSQL_TIME_DOS =
+  /\bnew\s+Date\s*\([^)]*\)[\s\S]{0,120}?\bwhile\s*\(\s*[\w.]+\s*-\s*[\w.]+/i;
+
+/**
+ * T-SQL (MSSQL) local-variable declaration — `DECLARE @c varchar(255)`,
+ * `DECLARE @x int` — the opening move of a stacked-query out-of-band payload
+ * (`DECLARE @c …; SELECT @c = 'ping ' + master.sys.fn_varbintohexstr(…)`).
+ * `paranoid`: `DECLARE @var <type>` is unambiguously T-SQL, but a code-sharing
+ * or DBA-tooling app can legitimately post a stored-procedure body, so the
+ * highest-FP tier owns it; the `declare` prefilter keeps it off clean traffic.
+ */
+const MSSQL_DECLARE =
+  /\bDECLARE\s+@\w+\s+(?:var|n)?(?:char|binary)\b|\bDECLARE\s+@\w+\s+(?:big|small|tiny)?int\b|\bDECLARE\s+@\w+\s+(?:table|cursor|xml|money|bit|float|real|uniqueidentifier|date(?:time(?:2|offset)?|)?|time)\b/i;
+
 function sqliFieldRules(
   field: 'query' | 'body' | 'path' | 'cookies',
   pattern: RegExp,
@@ -237,7 +263,7 @@ export const sqliRules: readonly WafRule[] = [
     action: 'block',
     minLevel: 'high',
     reason: 'Possible NoSQL injection via MongoDB driver API call',
-    when: anyFieldMatches(['query', 'body'], NOSQL_DRIVER_API, ['db.']),
+    when: anyFieldMatches(['query', 'body', 'path'], NOSQL_DRIVER_API, ['db.']),
   },
   {
     id: 'preset-sqli-blind',
@@ -248,11 +274,27 @@ export const sqliRules: readonly WafRule[] = [
     when: anyFieldMatches(PAYLOAD_PATH_FIELDS, SQLI_BLIND),
   },
   {
+    id: 'preset-sqli-nosql-time-dos',
+    priority: 54,
+    action: 'block',
+    minLevel: 'high',
+    reason: 'Possible NoSQL $where timing denial-of-service loop',
+    when: anyFieldMatches(PAYLOAD_PATH_FIELDS, NOSQL_TIME_DOS, ['new date']),
+  },
+  {
     id: 'preset-sqli-nosql-timebomb',
     priority: 54,
     action: 'block',
     minLevel: 'paranoid',
     reason: 'Possible NoSQL $where JavaScript denial-of-service loop',
     when: anyFieldMatches(PAYLOAD_FIELDS, NOSQL_TIMEBOMB, ['while', 'for(']),
+  },
+  {
+    id: 'preset-sqli-mssql-declare',
+    priority: 56,
+    action: 'block',
+    minLevel: 'paranoid',
+    reason: 'Possible stacked-query SQL injection via T-SQL DECLARE',
+    when: anyFieldMatches(PAYLOAD_PATH_FIELDS, MSSQL_DECLARE, ['declare']),
   },
 ];

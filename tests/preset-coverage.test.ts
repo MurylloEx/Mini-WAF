@@ -44,6 +44,11 @@ const BENIGN_QUERIES: ReadonlyArray<readonly [string, QueryMap]> = [
   ['windows forward path', { note: 'saved to C:/Users/me/report.pdf' }],
   ['optional chaining prose', { note: 'read document?.title and alert. (later) if set' }],
   ['eval word prose', { q: 'we will eval. the results tomorrow' }],
+  ['new date prose', { code: 'const now = new Date(); render(now)' }],
+  ['while loop prose', { note: 'I read a book while commuting to work' }],
+  ['fetch prose newline', { note: 'first line\nplease fetch the file soon' }],
+  ['quit prose newline', { note: 'take a break\nquit the app when you are done' }],
+  ['capability prose newline', { note: 'the platform\nhas strong capability today' }],
 ];
 
 const BENIGN_BODIES: ReadonlyArray<readonly [string, string]> = [
@@ -67,6 +72,9 @@ const BENIGN_PATHS: readonly string[] = [
   '/blog/how-to-use-node.js',
   '/docs/guide/quick-start.html',
   '/v2.1/reports/monthly',
+  '/docs/api/window.location.html',
+  '/blog/how-we-cut-db.users.find-latency',
+  '/help/keyboard-alert-and-prompt-shortcuts',
 ];
 
 /** `[label, lowest level that must block it, query]`. */
@@ -90,9 +98,12 @@ const ATTACK_QUERIES: ReadonlyArray<
   ['sqli compact subquery', 'high', { q: '(select(1)from(users))' }, 'preset-sqli-compact-subquery'],
   ['sqli json_extract', 'high', { id: 'json_extract(data,0x22)' }, 'preset-sqli-json-functions'],
   ['nosql driver api', 'high', { q: 'db.users.find({})' }, 'preset-sqli-nosql-driver-api'],
+  ['nosql timing dos', 'high', { q: '0;var d=new Date(); do{c=new Date();}while(c-d<10000)' }, 'preset-sqli-nosql-time-dos'],
   ['ldap matching rule', 'high', { u: 'cn:1.2.840.113556.1.4.803:=2' }, 'preset-ldap-matching-rule'],
   ['xss indirect call', 'high', { q: '(alert)(1)' }, 'preset-xss-indirect-call'],
   ['mail RCPT TO injection', 'high', { email: 'a@b.com\r\nRCPT TO: victim@x' }, 'preset-protocol-mail-command'],
+  ['imap capability injection', 'high', { q: '\r\nV100 CAPABILITY\r\nV101 FETCH 4791' }, 'preset-protocol-imap-command'],
+  ['mail quit teardown', 'high', { q: '\r\nQUIT\r\n' }, 'preset-protocol-mail-teardown'],
   ['unc share path', 'high', { file: '\\\\10.0.0.1\\c$\\windows' }, 'preset-lfi-unc-path'],
   ['sqli order by', 'high', { sort: '1 ORDER BY 9--' }, 'preset-sqli-blind'],
   ['sqli case when', 'high', { id: '1 CASE WHEN (1=1) THEN 1 ELSE 0 END' }, 'preset-sqli-blind'],
@@ -140,6 +151,8 @@ const ATTACK_QUERIES: ReadonlyArray<
   ['asp string concat', 'paranoid', { c: 'Ex"&"e"&"cute' }, 'preset-rce-asp-concat'],
   ['graphql introspection', 'paranoid', { query: 'query{__schema{types{name}}}' }, 'preset-graphql-introspection'],
   ['mail verb no crlf', 'paranoid', { msg: 'RCPT TO: victim@x.com' }, 'preset-protocol-mail-verb'],
+  ['mssql declare stacked', 'paranoid', { id: '1;/* a */ DECLARE @c varchar(255)' }, 'preset-sqli-mssql-declare'],
+  ['windows set arithmetic', 'paranoid', { c: '| set /a 3482*7301' }, 'preset-rce-windows-cmd-set'],
 ];
 
 const ATTACK_PATHS: ReadonlyArray<readonly [string, ProtectionLevel, string]> = [
@@ -165,6 +178,9 @@ const ATTACK_PATH_IDS: ReadonlyArray<
   ['crlf encoded in path', 'balanced', '/redir%0d%0aSet-Cookie:x=1', 'preset-protocol-crlf-encoded-path'],
   ['crlf double-encoded in path', 'balanced', '/redir%250d%250aSet-Cookie', 'preset-protocol-crlf-double-encoded'],
   ['ldap filter in path', 'high', '/dir/(uid=*)', 'preset-ldap-filter'],
+  ['xss indirect call in path', 'high', '/view/(alert)(1)', 'preset-xss-indirect-call'],
+  ['xss breakout call in path', 'high', "/go/'-alert(1)//", 'preset-xss-breakout-call'],
+  ['nosql driver api in path', 'high', '/api/db.users.find({})', 'preset-sqli-nosql-driver-api'],
   ['traversal overlong 4-byte', 'low', '/files/%f0%80%80%afboot', 'preset-path-traversal-encoded'],
   ['crlf per-char encoded', 'balanced', '/x%25%30%41Set-cookie:crlf=1', 'preset-protocol-crlf-double-encoded'],
 ];
@@ -208,6 +224,10 @@ const PARANOID_BENIGN: ReadonlyArray<readonly [string, QueryMap]> = [
   ['graphql typename', { query: 'query{__typename user{id name}}' }],
   ['gopher word prose', { note: 'the gopher digs tunnels underground' }],
   ['public ip url', { cb: 'http://93.184.216.34/callback' }],
+  ['declare winner prose', { note: 'I hereby declare this project the winner' }],
+  ['declare variable prose', { doc: 'please declare a variable named total' }],
+  ['set reminder prose', { q: 'can you set a reminder for tomorrow' }],
+  ['set appearance path prose', { note: 'go to set /appearance in the menu' }],
 ];
 
 const UA = { 'user-agent': 'Mozilla/5.0' } as const;
