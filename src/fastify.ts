@@ -29,11 +29,17 @@ interface FastifyLikeInstance {
 /**
  * Fastify plugin (register with `app.register(fastifyWaf, { config })`).
  * Marked with skip-override so hooks apply to parent routes.
+ *
+ * Declared `async` deliberately: Fastify 4's avvio treats a synchronous plugin
+ * whose arity is 2 (no `done` callback) and which returns `undefined` as never
+ * signalling completion, so the boot sequence (`listen`/`ready`/`inject`) hangs
+ * forever. Returning a resolved promise is what makes the advertised
+ * `fastify >= 4` peer range genuinely work; Fastify 5 is unaffected either way.
  */
-export function fastifyWaf(
+export async function fastifyWaf(
   instance: FastifyLikeInstance,
   opts: FastifyPluginOptions,
-): void {
+): Promise<void> {
   const config = opts.config ?? opts.settings ?? { presets: ['default'] };
   const waf = createMiniWaf(config, opts);
   const adapter = createFastifyAdapter();
