@@ -23,10 +23,10 @@ Latencies in microseconds.
 | **A5** | A1 SQLi — block path (early-exit) | 50 | 108.47k/s | 8.60 µs | 9.80 µs | 18.20 µs |
 | **A6-low** | `level: 'low'` clean allow | 19 | 130.84k/s | 6.90 µs | 9.90 µs | 15.40 µs |
 | **A6-balanced** | `level: 'balanced'` clean allow | 50 | 67.94k/s | 13.30 µs | 21.00 µs | 30.40 µs |
-| **A6-high** | `level: 'high'` clean allow | 77 | 35.98k/s | 25.10 µs | 43.00 µs | 60.40 µs |
-| **A6-paranoid** | `level: 'paranoid'` clean allow | 88 | 33.98k/s | 26.70 µs | 45.00 µs | 62.30 µs |
-| **A7-y0** | Paranoid, `ruleYieldEvery: 0` | 88 | 33.71k/s | 27.10 µs | 44.60 µs | 62.10 µs |
-| **A7-y32** | Paranoid, `ruleYieldEvery: 32` | 88 | 34.01k/s | 27.20 µs | 40.60 µs | 59.00 µs |
+| **A6-high** | `level: 'high'` clean allow | 80 | 33.94k/s | 28.10 µs | 34.50 µs | 44.50 µs |
+| **A6-paranoid** | `level: 'paranoid'` clean allow | 93 | 30.75k/s | 31.00 µs | 38.20 µs | 52.10 µs |
+| **A7-y0** | Paranoid, `ruleYieldEvery: 0` | 93 | 30.84k/s | 30.90 µs | 38.90 µs | 55.80 µs |
+| **A7-y32** | Paranoid, `ruleYieldEvery: 32` | 93 | 29.98k/s | 31.90 µs | 39.00 µs | 53.40 µs |
 
 > `A1`–`A5` run the `balanced` pack minus `preset-dos-rate-limit`, hence 50
 > rules where `A6-balanced` reports 51.
@@ -43,21 +43,22 @@ Latencies in microseconds.
   see [Known inherent costs](#known-inherent-costs).
 - **A1 → A5**: block can be *faster* than a full clean allow (early-exit).
 - **A6-low → A6-paranoid**: cost scales roughly with rule count
-  (19 → 88 rules); `low` remains ~7 µs p50.
-- **A7-y0 ↔ A7-y32**: within noise on an 88-rule pack; the ~1ms yield budget
+  (19 → 93 rules); `low` remains ~7 µs p50.
+- **A7-y0 ↔ A7-y32**: within noise on a 93-rule pack; the ~1ms yield budget
   does not trip on a clean paranoid scan.
 - **Transport decode (`high`/`paranoid`)**: these levels auto-enable whole-value
-  **Base64** decoding and **percent (URL)** decoding. On clean traffic (nothing
-  decodes) the two decoders add a per-field memoized shape check (a Base64
-  char-class/length test and a `String.includes('%')` test) — an isolated
+  **Base64** decoding, **percent (URL)** decoding and **inline-SQL-comment**
+  stripping. On clean traffic (nothing decodes) the three normalizers add a
+  per-field memoized shape check (a Base64 char-class/length test, a
+  `String.includes('%')` test and a `String.indexOf('/*')` test) — an isolated
   decode-on vs decode-off measurement at `high` puts this at **≈ +10 %** of the
   `A6-high` scan (in the +10–15 % band), and **zero** at `low`/`balanced` (the
-  match path is byte-for-byte identical when decoding is off). Decode work only
-  runs when a value is actually a Base64 blob surviving the shape + printable
-  gates, or actually carries a `%XX` escape that changes on decode. A JSON body
-  is additionally parsed once (memoized, depth/count bounded) so its string
-  values reach the same decoders. Set `decode: { base64: false, url: false }` to
-  opt out at high+.
+  match path is byte-for-byte identical when decoding is off). Work only runs
+  when a value is actually a Base64 blob surviving the shape + printable gates,
+  actually carries a `%XX` escape that changes on decode, or actually contains a
+  `/*` comment. A JSON body is additionally parsed once (memoized, depth/count
+  bounded) so its string values reach the same decoders. Set
+  `decode: { base64: false, url: false, comments: false }` to opt out at high+.
 
 ## HTTP results (`B0`/`B1`, `C0`–`C3`)
 
@@ -76,7 +77,7 @@ Latencies in milliseconds.
 | **C3** | Same SQLi, WAF **403** | yes | 6.83k/s | 4.56 ms | 5.22 ms | 6.11 ms | **+2.8% req/s**, −3.7% p50 |
 
 Steady-state allow-path overhead (`B0↔B1`, `C0↔C1`) lands around
-**19–21% req/s / 23–27% p50** for a 45-rule `balanced` pack on tiny GETs.
+**19–21% req/s / 23–27% p50** for a 50-rule `balanced` pack on tiny GETs.
 This is the number to reason about: in a real HTTP server the WAF scan is a
 small slice of the request, so a ~40% engine-level delta shows up as ~20%
 end-to-end.
@@ -113,7 +114,7 @@ with a lower `maxFieldLength`, narrower `presets`, a smaller `level`, or
 
 Higher levels activate more rules; ops/s and p50 track rule count roughly
 linearly. No super-linear cliff in this suite. With `presets: ['default']` the
-active count is 19 / 51 / 78 / 89 for `low` / `balanced` / `high` / `paranoid`.
+active count is 19 / 51 / 81 / 94 for `low` / `balanced` / `high` / `paranoid`.
 
 Cost is really *rules × candidate values per field*: a rule targeting `query`
 runs once per query parameter, so a request with ten parameters costs ten

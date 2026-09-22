@@ -91,7 +91,7 @@ how many rules use it.
 }
 ```
 
-This is what keeps the 89-rule `default` pack affordable on large bodies: most
+This is what keeps the 94-rule `default` pack affordable on large bodies: most
 preset rules declare one, so a clean request costs a handful of substring scans
 instead of dozens of regex passes. On an 8 KB body it roughly doubled
 throughput at an unchanged rule count.

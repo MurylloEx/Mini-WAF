@@ -15,16 +15,16 @@ treated as `low`, i.e. active at every level.
 |-------|-------------------|----------|-------------|----------|
 | `low` | 19 | Obvious scanners (UA), classic SQLi + DBMS primitives, plain & encoded traversal / LFI, stream-wrapper RFI, PHP RCE, shell RCE, JNDI/Log4Shell, reverse shells, fetch-and-exec, Windows LOLBins, SSRF metadata | APIs sensitive to false positives | PL1 (core) |
 | `balanced` (default) | 51 | `low` + XSS (incl. encoded tags, `data:` URIs, attribute vectors, path), SQLi tautologies & `SELECT … FROM`, NoSQL operators (quoted & unquoted), uploads & extension bypass, remote-URL RFI, SSTI, FreeMarker, Node/lang exec, deserialization (binary & YAML), null-byte, DoS rate-limit, protocol splitting/smuggling, encoded & double-encoded CRLF | General production | PL1–PL2 |
-| `high` | 78 | `balanced` + SSI, hex flood, prototype pollution, advanced/blind/boolean-equality/compact-subquery/JSON SQLi, NoSQL driver API, LDAP filter & matching-rule, XXE, mail command injection, UNC paths, XSS JS primitives, indirect & breakout sink calls, CL+TE, shell `$()`/`${IFS}`, session ID in URL | Under attack / broader coverage | PL2 |
-| `paranoid` | 89 | `high` + broad UAs, generic HTML tags, empty UA, shebang, oversized headers, internal-host SSRF, GraphQL introspection, ASP concat obfuscation, NoSQL `$where` time-bomb, CRLF-less mail verbs | Max coverage; more FPs | PL3–PL4 |
+| `high` | 81 | `balanced` + SSI, hex flood, prototype pollution, advanced/blind/boolean-equality/compact-subquery/JSON SQLi, NoSQL driver API & `$where` timing DoS, LDAP filter & matching-rule, XXE, mail command / IMAP / QUIT injection, UNC paths, XSS JS primitives, indirect & breakout sink calls, CL+TE, shell `$()`/`${IFS}`, session ID in URL | Under attack / broader coverage | PL2 |
+| `paranoid` | 94 | `high` + broad UAs, generic HTML tags, empty UA, shebang, oversized headers, internal-host SSRF, GraphQL introspection, ASP concat obfuscation, NoSQL `$where` time-bomb, MSSQL `DECLARE`, cmd `set /a`, CRLF-less mail verbs | Max coverage; more FPs | PL3–PL4 |
 
 Counts assume `presets: ['default']`. Cost tracks rule count roughly linearly,
 so the level is also your main performance dial — see
 [Performance](/guide/performance).
 
-`high` and `paranoid` also auto-enable **transport decoding**, two decoders that
-rescan a decoded value with the same rules so an encoded attack can no longer
-slip a plaintext pattern:
+`high` and `paranoid` also auto-enable **transport decoding**, three normalizers
+that rescan a decoded/de-obfuscated value with the same rules so an encoded or
+obfuscated attack can no longer slip a plaintext pattern:
 
 - **Base64** — a whole field value that is a single Base64 blob (padded or
   unpadded), such as a query/cookie value or one JSON body value like
@@ -32,9 +32,13 @@ slip a plaintext pattern:
 - **URL** — a value carrying a `%XX` escape is percent-decoded once, reaching
   payloads sent percent-encoded on surfaces the framework does not decode itself
   (URL path segments, multipart parts, raw bodies).
+- **Comments** — inline SQL comments used as token separators
+  (`SELECT/**/value/**/FROM`, the `space2comment` sqlmap tamper) are stripped so
+  the keyword-adjacency SQLi patterns see the payload. Versioned `/*!…*/`
+  comments (which the database executes) are preserved.
 
-Both are a new false-positive axis, so they stay off at `low`/`balanced`;
-override either way with `decode: { base64: …, url: … }`. See
+Each is a new false-positive axis, so they stay off at `low`/`balanced`;
+override any of them with `decode: { base64: …, url: …, comments: … }`. See
 [Configuration](/guide/configuration) and [Performance](/guide/performance).
 
 ## Gating your own rules

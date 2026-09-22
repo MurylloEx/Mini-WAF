@@ -205,7 +205,7 @@ Everything goes through `WafConfig` in `expressWaf(config)`, `fastifyWaf` (`conf
   ruleYieldEvery?: number;     // yield to event loop every N rules; default 32 (0 = off)
   maxRateLimitKeys?: number;   // LRU cap on distinct rate-limit keys; default 10000
   decisionCache?: { max?: number; ttlMs?: number }; // short-TTL decision LRU; off by default
-  decode?: { base64?: boolean; url?: boolean }; // decode whole-value Base64 (+ JSON body values) and percent-encoding, then rescan; auto-on at high+
+  decode?: { base64?: boolean; url?: boolean; comments?: boolean }; // decode whole-value Base64 (+ JSON body values), percent-encoding, and strip inline SQL comments, then rescan; auto-on at high+
 }
 ```
 
@@ -217,7 +217,7 @@ Everything goes through `WafConfig` in `expressWaf(config)`, `fastifyWaf` (`conf
 | `ruleYieldEvery` | `32` | After every N rules, `handle` awaits `setImmediate` so large rule packs do not starve the event loop. Packs with fewer than N rules skip yielding (fully synchronous scan, still returns a `Promise`). Set `0` to always disable yielding. Safe together with `rateLimit` rules: counters live in a shared in-place store (no snapshot/replace race). |
 | `maxRateLimitKeys` | `10000` | Cap on distinct rate-limit keys (usually per-IP buckets). Cold keys are evicted LRU-style when the cap is exceeded; idle keys are also pruned opportunistically. Bounds memory/CPU under IP floods even when `preset-dos-rate-limit` is active. |
 | `decisionCache` | omitted (off) | Tiny LRU of allow/block decisions keyed by method + path + IP + query + UA + body hash. **Automatically disabled** when any active rule uses `rateLimit` so DoS counters still advance. Use only for mostly-static pattern rules; keep `max` / `ttlMs` small (defaults: 256 / 1000ms). |
-| `decode` | auto-on at `high`+ | Two decoders that rescan a decoded value with the existing rules: **base64** decodes a whole-value Base64 blob (padded or unpadded) — a query/cookie value, or a single JSON body value like `{"q":"<base64>"}`; **url** percent-decodes a value carrying a `%XX` escape, reaching payloads sent percent-encoded on surfaces the framework does not decode (URL path, multipart, raw bodies). A new false-positive axis, so both are **off at `low`/`balanced`** and add zero cost there; set `{ base64: false, url: false }` to opt out at high+. Only Base64 values that survive a shape check **and** decode to mostly-printable text are rescanned, so tokens / UUIDs / image blobs are skipped. |
+| `decode` | auto-on at `high`+ | Three normalizers that rescan a decoded/de-obfuscated value with the existing rules: **base64** decodes a whole-value Base64 blob (padded or unpadded) — a query/cookie value, or a single JSON body value like `{"q":"<base64>"}`; **url** percent-decodes a value carrying a `%XX` escape, reaching payloads sent percent-encoded on surfaces the framework does not decode (URL path, multipart, raw bodies); **comments** strip inline SQL comments used as token separators (`SELECT/**/value/**/FROM`, the `space2comment` tamper), preserving versioned `/*!…*/`. A new false-positive axis, so all are **off at `low`/`balanced`** and add zero cost there; set `{ base64: false, url: false, comments: false }` to opt out at high+. Only Base64 values that survive a shape check **and** decode to mostly-printable text are rescanned, so tokens / UUIDs / image blobs are skipped. |
 
 Normalized client IPs are also memoized in a process-local LRU (max 2048) — the same idea as geo/IP caches in lightweight WAF tutorials, without an external `lru-cache` dependency.
 
@@ -239,8 +239,8 @@ Custom rules **without** `minLevel` are treated as `low` (active at any level).
 |-------|-------------------|----------|-------------|----------|
 | `low` | 19 | Obvious scanners (UA), classic SQLi + DBMS primitives, plain & encoded traversal / LFI, stream-wrapper RFI, PHP RCE, shell RCE, JNDI/Log4Shell, reverse shells, fetch-and-exec, Windows LOLBins, SSRF metadata | APIs sensitive to false positives | PL1 (core) |
 | `balanced` (default) | 51 | `low` + XSS (incl. encoded tags, `data:` URIs, attribute vectors, path), SQLi tautologies & `SELECT … FROM`, NoSQL operators (quoted & unquoted), uploads & extension bypass, remote-URL RFI, SSTI, FreeMarker, Node/lang exec, deserialization (binary & YAML), null-byte, DoS rate-limit, protocol splitting/smuggling, encoded & double-encoded CRLF | General production | PL1–PL2 |
-| `high` | 78 | `balanced` + SSI, hex flood, prototype pollution, advanced/blind/boolean-equality/compact-subquery/JSON SQLi, NoSQL driver API, LDAP filter & matching-rule, XXE, mail command injection, UNC paths, XSS JS primitives, indirect & breakout sink calls, CL+TE, shell `$()` and parameter-expansion tricks, session ID in URL | Under attack / broader coverage | PL2 |
-| `paranoid` | 89 | `high` + broad UAs, generic HTML tags, empty UA, shebang, oversized headers, internal-host SSRF, GraphQL introspection, ASP concat obfuscation, NoSQL `$where` time-bomb, CRLF-less mail verbs | Max coverage; more FPs | PL3–PL4 |
+| `high` | 81 | `balanced` + SSI, hex flood, prototype pollution, advanced/blind/boolean-equality/compact-subquery/JSON SQLi, NoSQL driver API & `$where` timing DoS, LDAP filter & matching-rule, XXE, mail command / IMAP / QUIT injection, UNC paths, XSS JS primitives, indirect & breakout sink calls, CL+TE, shell `$()` and parameter-expansion tricks, session ID in URL | Under attack / broader coverage | PL2 |
+| `paranoid` | 94 | `high` + broad UAs, generic HTML tags, empty UA, shebang, oversized headers, internal-host SSRF, GraphQL introspection, ASP concat obfuscation, NoSQL `$where` time-bomb, MSSQL `DECLARE`, cmd `set /a`, CRLF-less mail verbs | Max coverage; more FPs | PL3–PL4 |
 
 ```ts
 expressWaf({
@@ -403,7 +403,7 @@ const rules: WafRule[] = [
 A value is only handed to `matches` when it contains one of these substrings
 (case-insensitive). An `indexOf` scan is far cheaper than a regex pass over a
 large body, and the lowercased view of each field is computed once per request
-and shared by every rule, so this is how the presets keep an 89-rule pack cheap:
+and shared by every rule, so this is how the presets keep a 94-rule pack cheap:
 
 ```ts
 {

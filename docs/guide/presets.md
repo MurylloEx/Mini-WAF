@@ -57,18 +57,18 @@ And the DoS rate-limit rule from the same pack, the one that automatically disab
 
 | Preset | Rules | Focus | CRS-ish |
 |--------|-------|-------|---------|
-| `default` | 89 | Union of all packs below (order: scanners → protocol → sqli → xss → path-traversal → rfi → rce) | — |
-| `sqli` | 20 | SQL injection (classic, tautology, DBMS primitives, blind, boolean equality, compact subquery, JSON functions) + NoSQL operator injection (quoted, unquoted, driver API, `$where` time-bomb) | REQUEST-942 |
+| `default` | 94 | Union of all packs below (order: scanners → protocol → sqli → xss → path-traversal → rfi → rce) | — |
+| `sqli` | 22 | SQL injection (classic, tautology, DBMS primitives, blind, boolean equality, compact subquery, JSON functions, MSSQL `DECLARE`) + NoSQL operator injection (quoted, unquoted, driver API, `$where` time-bomb & timing DoS) | REQUEST-942 |
 | `xss` | 14 | XSS in query/body/headers/cookies/path, encoded tags, `data:` URIs, attribute vectors, JS primitives, indirect & breakout sink calls, SSI | REQUEST-941 (+ SSI) |
 | `scanners` | 12 | Scanner UAs, LDAP filter & matching-rule injection, GraphQL introspection, null-byte, data exposure, pollution, hex flood, headers, shebang, DoS rate-limit | REQUEST-913 / 912 |
 | `path-traversal` | 5 | Plain and encoded traversal, UNC / admin-share paths, LFI OS / restricted files | REQUEST-930 |
 | `rfi` | 7 | Stream wrappers, remote script include, PHP include syntax, PHP RCE, XXE, dangerous uploads | REQUEST-931 / 933 |
-| `rce` | 18 | Shellshock, JNDI/Log4Shell, unix/windows cmds, reverse shells, fetch-and-exec, LOLBins, SSRF (metadata & internal), SSTI, FreeMarker, Node/lang exec, deserialization (binary & YAML), ASP concat | REQUEST-932 / 934 |
-| `protocol` | 13 | Response splitting, smuggling, CRLF (literal, encoded & double-encoded), mail command & verb injection, header injection, CL+TE, Host IP, session fixation / ID in URL, empty UA | REQUEST-920 / 921 / 943 |
+| `rce` | 19 | Shellshock, JNDI/Log4Shell, unix/windows cmds (incl. `set /a`), reverse shells, fetch-and-exec, LOLBins, SSRF (metadata & internal), SSTI, FreeMarker, Node/lang exec, deserialization (binary & YAML), ASP concat | REQUEST-932 / 934 |
+| `protocol` | 15 | Response splitting, smuggling, CRLF (literal, encoded & double-encoded), mail command/verb & IMAP/QUIT injection, header injection, CL+TE, Host IP, session fixation / ID in URL, empty UA | REQUEST-920 / 921 / 943 |
 
 Counts are the full pack; how many actually run depends on your `level`. With
 `presets: ['default']` that is **19** rules at `low`, **51** at `balanced`,
-**78** at `high` and **89** at `paranoid`.
+**81** at `high` and **94** at `paranoid`.
 
 ## Rule ids by preset
 
@@ -88,8 +88,13 @@ which the rule runs.
 | `preset-sqli-nosql-string` | `balanced` | Unquoted operator form: `$where: '…'`, `, $or: [`, `{$gt: ''}` |
 | `preset-sqli-advanced-{query,body,path,cookies}` | `high` | `SLEEP`/`BENCHMARK`/`WAITFOR`, `INFORMATION_SCHEMA`, stacked queries |
 | `preset-sqli-boolean-equality` | `high` | Keyword-free numeric test: `AND 1=1`, `OR 6522=6522`, `) AND 12=12` |
+| `preset-sqli-compact-subquery` | `high` | Whitespace-free nested subquery: `(select(1)from(users))` |
+| `preset-sqli-json-functions` | `high` | JSON accessors: `JSON_EXTRACT(`, `JSON_KEYS(`, `JSON_ARRAYAGG(` |
+| `preset-sqli-nosql-driver-api` | `high` | MongoDB driver call: `db.users.find({…})`, `db.coll.aggregate(` |
 | `preset-sqli-blind` | `high` | `ORDER BY 9--`, `HAVING 1=1`, `CASE WHEN`, `CHAR(…)` chains, trailing `--` |
+| `preset-sqli-nosql-time-dos` | `high` | MongoDB `$where` timing DoS: `new Date() … while(a-b)` busy-wait |
 | `preset-sqli-nosql-timebomb` | `paranoid` | MongoDB `$where` JS DoS loop: `while(true)`, `for(;;)` |
+| `preset-sqli-mssql-declare` | `paranoid` | T-SQL stacked query: `DECLARE @c varchar(255)` |
 
 ### `xss`
 
@@ -116,6 +121,7 @@ which the rule runs.
 |----|-----|---------|
 | `preset-scanners-ua` | `low` | Known scanner User-Agents (sqlmap, nikto, nuclei…) |
 | `preset-ldap-filter` | `high` | LDAP filter injection: `(&(`, `*)(uid=*`, `(objectClass=*)` |
+| `preset-ldap-matching-rule` | `high` | LDAP matching-rule OID bypass: `cn:1.2.840.113556.1.4.803:=2` |
 | `preset-null-byte` | `balanced` | Null byte in query / path / body / headers |
 | `preset-dos-rate-limit` | `balanced` | Per-IP rate limit (side effect; disables `decisionCache` when active) |
 | `preset-data-exposure` | `high` | `phpinfo.php`, `HTTP_RAW_POST_DATA` probes |
@@ -133,6 +139,7 @@ which the rule runs.
 | `preset-path-traversal` | `low` | `../`, `..\`, `..%2f`, `..;/` |
 | `preset-path-traversal-encoded` | `low` | `%2e%2e%2f`, `%252e%252e`, `..%c0%af`, mixed `.%2e/` |
 | `preset-lfi-os-files` | `low` | `/etc/passwd`, `boot.ini`, `/proc/self`, `windows/system32` |
+| `preset-lfi-unc-path` | `high` | UNC / admin-share path: `\\10.0.0.1\c$\windows` |
 | `preset-lfi-restricted-files` | `balanced` | `.git/`, `.env`, `.htaccess`, `wp-config.php`, `id_rsa` |
 
 Adapters expose `path` exactly as it arrived on the wire, so the encoded rule is
@@ -146,6 +153,7 @@ what catches `%2e%2e%2f` — the plain one never sees a decoded `..`.
 | `preset-rce-php` | `low` | `eval(base64_decode(`, `call_user_func_array`, `create_function`, `$_GET[` |
 | `preset-rfi-remote-url` | `balanced` | Absolute URL ending in `.php`/`.txt`/`.jsp`/… or a trailing `?` |
 | `preset-rfi-include-syntax` | `balanced` | `include('…')`, `require_once $x` |
+| `preset-xxe-doctype` | `high` | XXE: `<!DOCTYPE … <!ENTITY … SYSTEM "…">`, external DTD |
 | `preset-dangerous-upload` | `balanced` | Upload named `*.php`, `*.jsp`, `*.ps1`, `*.exe`… |
 | `preset-upload-extension-bypass` | `balanced` | `shell.php.jpg`, `shell.php\x00.jpg` |
 
@@ -167,10 +175,13 @@ what catches `%2e%2e%2f` — the plain one never sees a decoded `..`.
 | `preset-rce-ssti` | `balanced` | <span v-pre>`{{…}}`</span>, `#{…}`, `<%…%>` with execution indicators |
 | `preset-rce-nodejs` | `balanced` | `require('child_process')`, `child_process.exec(` |
 | `preset-rce-lang-exec` | `balanced` | `os.system(`, `subprocess.Popen(`, `Runtime.getRuntime().exec(`, `ProcessBuilder(` |
+| `preset-rce-freemarker` | `balanced` | FreeMarker injection: `<#assign … ?new()>`, `freemarker.template.utility.Execute` |
+| `preset-rce-yaml-deserialization` | `balanced` | Unsafe YAML tags: `!!python/object/apply:`, `!ruby/object`, `!!java` |
 | `preset-rce-deserialization` | `balanced` | Java `rO0AB…`, PHP `O:8:"…"`, `pickle.loads(`, `yaml.load(` |
 | `preset-rce-shell-expression` | `high` | `$(…)`, `<(…)`, `${IFS}`, `${VAR:-…}` parameter expansion |
 | `preset-rce-fork-bomb` | `high` | `:(){ :\|:& };:` |
 | `preset-ssrf-internal` | `paranoid` | URL to a private / loopback host: `http://127.0.0.1`, `gopher://10.0.0.5`, `192.168.*` |
+| `preset-rce-windows-cmd-set` | `paranoid` | cmd.exe primitive: `set /a 3482*7301`, `set /p x=` |
 | `preset-rce-asp-concat` | `paranoid` | VBScript/ASP concat obfuscation: `Ex"&"e"&"cute`, `e'+'v'+'al` |
 
 `preset-rce-shell-expression` ignores plain `${name}` interpolation, so i18n and
@@ -186,6 +197,8 @@ price templates do not trip it — only shell expansion operators do.
 | `preset-protocol-crlf-encoded-path` | `balanced` | Percent-encoded CR/LF in path / URL: `%0d%0a`, `%0aSet-Cookie:` |
 | `preset-protocol-crlf-double-encoded` | `balanced` | Double-encoded / overlong CR/LF: `%250d%250a`, `%c0%8a` |
 | `preset-protocol-mail-command` | `high` | CR/LF + SMTP/IMAP verb: `\r\nRCPT TO`, `%0aMAIL FROM`, `EHLO`, `AUTH LOGIN` |
+| `preset-protocol-imap-command` | `high` | CR/LF + tagged IMAP command: `\r\nV100 CAPABILITY`, `V101 FETCH 4791` |
+| `preset-protocol-mail-teardown` | `high` | Mail session teardown alone on its line: `\r\nQUIT\r\n` |
 | `preset-protocol-mail-verb` | `paranoid` | SMTP/IMAP verb without CR/LF: `RCPT TO:`, `MAIL FROM:`, `EHLO host` |
 | `preset-session-fixation-cookie-html` | `balanced` | `.cookie … expires=`, `http-equiv=set-cookie` |
 | `preset-protocol-header-injection` | `high` | CR/LF + `Location:` / `X-Forwarded-For:` in the query |

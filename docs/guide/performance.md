@@ -122,19 +122,20 @@ A rule costs one matcher run **per candidate value of each field it targets**.
 parameters is 6 runs, not 2. Two consequences:
 
 - Raising `level` raises cost roughly linearly. With `presets: ['default']` the
-  active rule count is 19 / 51 / 78 / 89 for `low` / `balanced` / `high` /
+  active rule count is 19 / 51 / 81 / 94 for `low` / `balanced` / `high` /
   `paranoid` — pick the lowest level that meets your threat model.
 - `decisionCache` sidesteps the whole scan on a fingerprint hit, and is by far
   the cheapest win for traffic with repeated shapes (it is disabled
   automatically while a `rateLimit` rule is active).
-- `high`/`paranoid` auto-enable Base64 **and** percent (URL) decoding. On clean
-  traffic the two add a memoized per-field shape check (a Base64 char-class/length
-  test and a `String.includes('%')` test) — measured at **≈ +10 %** of the
-  high/paranoid scan — and decode only values that actually look like a Base64
-  blob or carry a `%XX` escape that changes on decode; both are **off**, and
-  free, at `low`/`balanced`. A JSON body is parsed once (memoized) to expose its
-  string values to the same decoders, bounded in depth and count. Set
-  `decode: { base64: false, url: false }` to opt out.
+- `high`/`paranoid` auto-enable Base64, percent (URL) **and** inline-SQL-comment
+  decoding. On clean traffic the three add a memoized per-field shape check (a
+  Base64 char-class/length test, a `String.includes('%')` test and a
+  `String.indexOf('/*')` test) — measured at **≈ +10 %** of the high/paranoid
+  scan — and normalize only values that actually look like a Base64 blob, carry a
+  `%XX` escape that changes on decode, or contain a `/*` comment; all three are
+  **off**, and free, at `low`/`balanced`. A JSON body is parsed once (memoized)
+  to expose its string values to the same decoders, bounded in depth and count.
+  Set `decode: { base64: false, url: false, comments: false }` to opt out.
 
 ## Regex caveats
 
