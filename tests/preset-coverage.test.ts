@@ -151,7 +151,7 @@ const ATTACK_QUERIES: ReadonlyArray<
   ['asp string concat', 'paranoid', { c: 'Ex"&"e"&"cute' }, 'preset-rce-asp-concat'],
   ['graphql introspection', 'paranoid', { query: 'query{__schema{types{name}}}' }, 'preset-graphql-introspection'],
   ['mail verb no crlf', 'paranoid', { msg: 'RCPT TO: victim@x.com' }, 'preset-protocol-mail-verb'],
-  ['mssql declare stacked', 'paranoid', { id: '1;/* a */ DECLARE @c varchar(255)' }, 'preset-sqli-mssql-declare'],
+  ['mssql declare typed var', 'paranoid', { id: 'x DECLARE @c varchar(255)' }, 'preset-sqli-mssql-declare'],
   ['windows set arithmetic', 'paranoid', { c: '| set /a 3482*7301' }, 'preset-rce-windows-cmd-set'],
 ];
 

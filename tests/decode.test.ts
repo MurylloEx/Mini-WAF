@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { createMiniWaf } from '@/engine/index';
 import {
   expandBase64Candidates,
+  expandCommentCandidates,
   expandUrlCandidates,
   extractJsonStringValues,
   extractPathSegments,
@@ -13,11 +14,11 @@ import { createMockContext } from './helpers/mock-context';
 const b64 = (value: string): string => Buffer.from(value, 'utf8').toString('base64');
 
 describe('expandBase64Candidates', () => {
-  const on = { base64: true, url: false };
+  const on = { base64: true, url: false, comments: false };
 
   it('returns the shared empty array when decoding is off', () => {
     expect(
-      expandBase64Candidates([b64('union select 1,2')], { base64: false, url: false }),
+      expandBase64Candidates([b64('union select 1,2')], { base64: false, url: false, comments: false }),
     ).toHaveLength(0);
   });
 
@@ -78,11 +79,11 @@ describe('expandBase64Candidates', () => {
 });
 
 describe('expandUrlCandidates', () => {
-  const on = { base64: false, url: true };
+  const on = { base64: false, url: true, comments: false };
 
   it('returns the shared empty array when url decoding is off', () => {
     expect(
-      expandUrlCandidates(['%3Cscript%3E'], { base64: false, url: false }),
+      expandUrlCandidates(['%3Cscript%3E'], { base64: false, url: false, comments: false }),
     ).toHaveLength(0);
   });
 
@@ -104,6 +105,57 @@ describe('expandUrlCandidates', () => {
   it('caps the number of decoded candidates per call', () => {
     const many = Array.from({ length: 40 }, (_, i) => `%3Cx${i}%3E`);
     expect(expandUrlCandidates(many, on).length).toBeLessThanOrEqual(16);
+  });
+});
+
+describe('expandCommentCandidates', () => {
+  const on = { base64: false, url: false, comments: true };
+
+  it('returns the shared empty array when comment stripping is off', () => {
+    expect(
+      expandCommentCandidates(['1/**/UNION/**/SELECT'], {
+        base64: false,
+        url: false,
+        comments: false,
+      }),
+    ).toHaveLength(0);
+  });
+
+  it('strips inline comments so keywords become adjacent', () => {
+    expect(
+      expandCommentCandidates(['SELECT/**/value/**/FROM/**/secrets'], on),
+    ).toEqual(['SELECT value FROM secrets']);
+  });
+
+  it('strips short content comments too (space2comment /*a*/ form)', () => {
+    expect(expandCommentCandidates(['1/*x*/AND/*y*/2=2'], on)).toEqual([
+      '1 AND 2=2',
+    ]);
+  });
+
+  it('preserves versioned comments (the DB executes their body)', () => {
+    // `/*!...*/` must survive: stripping it would delete the payload, and it is
+    // already caught by preset-sqli-versioned-comment.
+    expect(expandCommentCandidates(['1/*!50000UNION*/SELECT'], on)).toHaveLength(
+      0,
+    );
+  });
+
+  it('leaves a long prose comment intact (no re-interpretation)', () => {
+    // Over the 32-char cap, so a genuinely commented code snippet is untouched.
+    const long = 'x /* this is a long explanatory comment about the code */ y';
+    expect(expandCommentCandidates([long], on)).toHaveLength(0);
+  });
+
+  it('adds nothing for values without a comment', () => {
+    expect(
+      expandCommentCandidates(['plain value', 'a/b path'], on),
+    ).toHaveLength(0);
+  });
+
+  it('caps the number of stripped candidates per call', () => {
+    const many = Array.from({ length: 40 }, (_, i) => `${i}/**/AND/**/1=1`);
+    expect(expandCommentCandidates(many, on).length).toBeLessThanOrEqual(16);
   });
 });
 
@@ -348,6 +400,68 @@ describe('engine url decode layer', () => {
     const waf = createMiniWaf({ presets: ['default'], level: 'high' });
     const { ctx } = createMockContext({
       path: '/assets/550e8400e29b41d4a716446655440000/logo.png',
+    });
+    const result = await waf.handle(ctx);
+    expect(result.decision).toBe('allow');
+  });
+});
+
+describe('engine comment strip layer', () => {
+  // `space2comment` tamper: `/**/` between tokens defeats the keyword-adjacency
+  // SQLi patterns, which only see whitespace as a separator.
+  const tampered = '1/**/UNION/**/SELECT/**/username,password/**/FROM/**/users';
+
+  it('does not strip comments at balanced (default off)', async () => {
+    const waf = createMiniWaf({ presets: ['default'], level: 'balanced' });
+    const { ctx } = createMockContext({ query: { q: tampered } });
+    const result = await waf.handle(ctx);
+    expect(result.decision).toBe('allow');
+  });
+
+  it('auto-strips at high and blocks the de-obfuscated SQLi', async () => {
+    const waf = createMiniWaf({ presets: ['default'], level: 'high' });
+    const { ctx } = createMockContext({ query: { q: tampered } });
+    const result = await waf.handle(ctx);
+    expect(result.decision).toBe('block');
+    expect(result.matchedRule?.id).toMatch(/^preset-sqli/);
+  });
+
+  it('honours an explicit comments override below high', async () => {
+    const waf = createMiniWaf({
+      presets: ['default'],
+      level: 'balanced',
+      decode: { comments: true },
+    });
+    const { ctx } = createMockContext({ query: { q: tampered } });
+    const result = await waf.handle(ctx);
+    expect(result.decision).toBe('block');
+  });
+
+  it('can be disabled explicitly at high', async () => {
+    const waf = createMiniWaf({
+      presets: ['default'],
+      level: 'high',
+      decode: { comments: false },
+    });
+    const { ctx } = createMockContext({ query: { q: tampered } });
+    const result = await waf.handle(ctx);
+    expect(result.decision).toBe('allow');
+  });
+
+  it('strips a comment-obfuscated SELECT FROM on the URL path', async () => {
+    const waf = createMiniWaf({ presets: ['default'], level: 'high' });
+    const { ctx } = createMockContext({
+      path: '/report/1/**/UNION/**/SELECT/**/pass/**/FROM/**/users',
+    });
+    const result = await waf.handle(ctx);
+    expect(result.decision).toBe('block');
+  });
+
+  it('does not flag a benign body carrying a long code comment at high', async () => {
+    const waf = createMiniWaf({ presets: ['default'], level: 'high' });
+    const { ctx } = createMockContext({
+      method: 'POST',
+      body: '{"code":"const total = price /* running subtotal for the cart */ + tax"}',
     });
     const result = await waf.handle(ctx);
     expect(result.decision).toBe('allow');

@@ -210,20 +210,22 @@ export interface WafConfig {
     readonly ttlMs?: number;
   };
   /**
-   * Transport decoding. Decodes an encoded whole-value payload and rescans the
-   * decoded text with the **existing** rules, so encoders that wrap an attack
-   * in one blob (Base64) or percent-encode it on a surface the framework does
-   * not decode (URL path, multipart, raw body) can no longer slip a plaintext
-   * regex.
+   * Transport decoding. Decodes/normalizes an encoded or obfuscated whole-value
+   * payload and rescans the text with the **existing** rules, so encoders that
+   * wrap an attack in one blob (Base64), percent-encode it on a surface the
+   * framework does not decode (URL path, multipart, raw body), or slice inline
+   * SQL comments between keywords (`space2comment` tampers) can no longer slip a
+   * plaintext regex.
    *
    * A new false-positive axis (benign encoded text that decodes to rule-matching
-   * text), so both decoders are **off at `low`/`balanced` and auto-enabled at
-   * `high`+**. Set `base64` / `url` explicitly to override either way. Each adds
-   * zero cost while off.
+   * text), so all three are **off at `low`/`balanced` and auto-enabled at
+   * `high`+**. Set `base64` / `url` / `comments` explicitly to override either
+   * way. Each adds zero cost while off.
    */
   readonly decode?: {
     readonly base64?: boolean;
     readonly url?: boolean;
+    readonly comments?: boolean;
   };
 }
 

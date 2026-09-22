@@ -24,6 +24,13 @@ export interface DecodeSettings {
    * attack like `%3Cimg%20src…` never reaches a plaintext regex.
    */
   readonly url: boolean;
+  /**
+   * Strip inline SQL comments (`SELECT/**\/value/**\/FROM`) and rescan the
+   * de-obfuscated text. Targets the `space2comment` family of SQLi tampers,
+   * which slice `/**\/` between tokens so keyword-adjacency patterns
+   * (`preset-sqli-select-from`, union, boolean) never see them as adjacent.
+   */
+  readonly comments: boolean;
 }
 
 /** Shared empty result so `values === rawValues` when nothing decodes. */
@@ -188,6 +195,61 @@ export function expandUrlCandidates(
     }
   }
   return decoded.length === 0 ? NO_EXTRAS : decoded;
+}
+
+/**
+ * A single inline SQL comment used as a token separator. Three deliberate
+ * guards keep this to the evasion form and off legitimate commented code:
+ * - `(?!!)` preserves *versioned* comments (`/*!50000SELECT*\/`): the database
+ *   executes their body, so stripping them would delete the payload — and they
+ *   are already caught by `preset-sqli-versioned-comment`;
+ * - `[^*]{0,32}?` matches only *short* comments (the separator form `/**\/`,
+ *   `/*a*\/`), never a long prose comment, so `/* explanation … *\/` in a posted
+ *   code snippet is left intact and not re-interpreted;
+ * - the global flag removes every occurrence in one linear pass.
+ */
+const INLINE_SQL_COMMENT = /\/\*(?!!)[^*]{0,32}?\*\//g;
+
+/**
+ * Delete inline SQL comments from a value so `SELECT/**\/value/**\/FROM`
+ * collapses to `SELECT value FROM` for the rescan. Each comment becomes a
+ * single space, so tokens split by a comment do not fuse (`a/**\/b` → `a b`).
+ * Returns `undefined` when the value carries no `/*` (cheap one-`indexOf` gate)
+ * or when nothing changed, so the caller adds no candidate.
+ */
+function stripInlineSqlComments(value: string): string | undefined {
+  if (value.indexOf('/*') === -1) {
+    return undefined;
+  }
+  const stripped = value.replace(INLINE_SQL_COMMENT, ' ');
+  return stripped === value ? undefined : stripped;
+}
+
+/**
+ * Expand a field's raw candidate values with their comment-stripped forms, so
+ * the existing SQLi keyword patterns see `space2comment`-tampered payloads as
+ * plain adjacent keywords. Clean traffic pays a single `String.indexOf('/*')`
+ * per value and allocates nothing; bounded by the shared fan-out cap.
+ */
+export function expandCommentCandidates(
+  values: readonly string[],
+  settings: DecodeSettings,
+): readonly string[] {
+  if (!settings.comments) {
+    return NO_EXTRAS;
+  }
+  // Sanctioned mutable accumulator (see CLAUDE.md "avoid let").
+  const stripped: string[] = [];
+  for (const value of values) {
+    if (stripped.length >= MAX_DECODED_CANDIDATES) {
+      break;
+    }
+    const one = stripInlineSqlComments(value);
+    if (one !== undefined) {
+      stripped.push(one);
+    }
+  }
+  return stripped.length === 0 ? NO_EXTRAS : stripped;
 }
 
 /** Bound the path split so a pathological path cannot fan the rescan out. */

@@ -150,6 +150,7 @@ function resolveDecode(config: WafConfig): DecodeSettings {
   return {
     base64: config.decode?.base64 ?? autoOn,
     url: config.decode?.url ?? autoOn,
+    comments: config.decode?.comments ?? autoOn,
   };
 }
 
@@ -444,7 +445,7 @@ function defaultScanOptions(
   rateLimits: RateLimitPort,
   maxFieldLength = DEFAULT_MAX_FIELD_LENGTH,
   ruleYieldEvery = 0,
-  decode: DecodeSettings = { base64: false, url: false },
+  decode: DecodeSettings = { base64: false, url: false, comments: false },
 ): ScanOptions {
   return {
     ruleYieldEvery,
@@ -456,7 +457,7 @@ function defaultScanOptions(
         memoLower: new Map<WafField, readonly string[]>(),
         // Only carry the decode memos when a decoder is actually on — an off
         // config leaves the match path byte-for-byte the pre-decode behaviour.
-        ...(decode.base64 || decode.url
+        ...(decode.base64 || decode.url || decode.comments
           ? {
               decode,
               memoMatch: new Map<WafField, readonly string[]>(),

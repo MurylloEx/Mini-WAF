@@ -3,6 +3,7 @@ import type { WafHttpContext } from '@/domain/context';
 import { fileDisplayName, scalarToString } from '@/domain/values';
 import {
   expandBase64Candidates,
+  expandCommentCandidates,
   expandUrlCandidates,
   extractJsonStringValues,
   extractPathSegments,
@@ -11,7 +12,7 @@ import {
 
 /** True when any transport decoder is enabled for this request. */
 function decodeActive(decode: DecodeSettings | undefined): decode is DecodeSettings {
-  return decode !== undefined && (decode.base64 || decode.url);
+  return decode !== undefined && (decode.base64 || decode.url || decode.comments);
 }
 
 export interface FieldResolveOptions {
@@ -213,13 +214,16 @@ export function resolveFieldMatchValues(
   })();
   const base64Extras = expandBase64Candidates(decodeInput, decode);
   const urlExtras = expandUrlCandidates(decodeInput, decode);
-  // No decodable candidate from either decoder: reuse the raw array reference
+  const commentExtras = expandCommentCandidates(decodeInput, decode);
+  // No decodable candidate from any decoder: reuse the raw array reference
   // verbatim, so the lowercased resolver below can detect the no-extras case by
   // identity and skip re-lowering a possibly large body.
   const merged =
-    base64Extras.length === 0 && urlExtras.length === 0
+    base64Extras.length === 0 &&
+    urlExtras.length === 0 &&
+    commentExtras.length === 0
       ? raw
-      : [...raw, ...base64Extras, ...urlExtras];
+      : [...raw, ...base64Extras, ...urlExtras, ...commentExtras];
 
   options.memoMatch?.set(field, merged);
   return merged;
