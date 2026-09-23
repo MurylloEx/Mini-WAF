@@ -9,7 +9,7 @@
   <a href="https://www.npmjs.com/package/mini-waf"><img src="https://badgen.net/npm/types/mini-waf" alt="types"/></a>
   <img src="https://badgen.net/badge/node/%3E=18/green" alt="node"/>
   <a href="https://github.com/MurylloEx"><img src="https://badgen.net/badge/author/MurylloEx/red?icon=label" alt="author"/></a>
-  <a href="https://opencollective.com/mini-waf"><img src="https://badgen.net/opencollective/backers/mini-waf" alt="backers on Open Collective"/></a>
+  <a href="https://ko-fi.com/murylloex"><img src="https://badgen.net/badge/support/ko-fi/red" alt="support on Ko-fi"/></a>
 </p>
 
 # Mini WAF
@@ -20,14 +20,14 @@ Supports **Express**, **Fastify**, and **NestJS** (optional peers — install on
 
 Ships **dual CommonJS + ESM** with per-condition types, so `require`, `import`, and every `moduleResolution` mode (`node10`, `node16`, `nodenext`, `bundler`) resolve — subpaths included. Tree-shakeable (`sideEffects: false`), zero runtime dependencies.
 
-**Documentation:** [https://murylloex.github.io/Mini-WAF/](https://murylloex.github.io/Mini-WAF/)
+**Documentation:** [https://mini-waf.vercel.app/](https://mini-waf.vercel.app/)
 
 | | |
 |---|---|
-| **Get running** | [Quick start](https://murylloex.github.io/Mini-WAF/guide/quick-start) · [Express](https://murylloex.github.io/Mini-WAF/guide/integrations/express) · [Fastify](https://murylloex.github.io/Mini-WAF/guide/integrations/fastify) · [NestJS](https://murylloex.github.io/Mini-WAF/guide/integrations/nestjs) · [Custom adapters](https://murylloex.github.io/Mini-WAF/guide/integrations/custom-adapters) |
-| **Understand it** | [Core concepts](https://murylloex.github.io/Mini-WAF/guide/concepts) · [Conditions & matchers](https://murylloex.github.io/Mini-WAF/guide/conditions) · [Protection levels](https://murylloex.github.io/Mini-WAF/guide/protection-levels) |
-| **Write rules** | [Presets](https://murylloex.github.io/Mini-WAF/guide/presets) · [Custom rules](https://murylloex.github.io/Mini-WAF/guide/custom-rules) · [JSON rules](https://murylloex.github.io/Mini-WAF/guide/json-rules) |
-| **Operate it** | [Logging](https://murylloex.github.io/Mini-WAF/guide/logging) · [Performance](https://murylloex.github.io/Mini-WAF/guide/performance) · [Benchmarking](https://murylloex.github.io/Mini-WAF/guide/benchmarking) · [Security notes](https://murylloex.github.io/Mini-WAF/guide/security) |
+| **Get running** | [Quick start](https://mini-waf.vercel.app/guide/quick-start) · [Express](https://mini-waf.vercel.app/guide/integrations/express) · [Fastify](https://mini-waf.vercel.app/guide/integrations/fastify) · [NestJS](https://mini-waf.vercel.app/guide/integrations/nestjs) · [Custom adapters](https://mini-waf.vercel.app/guide/integrations/custom-adapters) |
+| **Understand it** | [Core concepts](https://mini-waf.vercel.app/guide/concepts) · [Conditions & matchers](https://mini-waf.vercel.app/guide/conditions) · [Protection levels](https://mini-waf.vercel.app/guide/protection-levels) |
+| **Write rules** | [Presets](https://mini-waf.vercel.app/guide/presets) · [Custom rules](https://mini-waf.vercel.app/guide/custom-rules) · [JSON rules](https://mini-waf.vercel.app/guide/json-rules) |
+| **Operate it** | [Logging](https://mini-waf.vercel.app/guide/logging) · [Performance](https://mini-waf.vercel.app/guide/performance) · [Benchmarking](https://mini-waf.vercel.app/guide/benchmarking) · [Security notes](https://mini-waf.vercel.app/guide/security) |
 
 ## Install
 
@@ -278,7 +278,7 @@ Individual presets: `'sqli' | 'xss' | 'scanners' | 'path-traversal' | 'rfi' | 'r
 | `protocol` | 15 | REQUEST-920 / 921 / 943 — splitting, smuggling, CRLF, mail / IMAP / QUIT injection, header injection, CL+TE, Host IP, session |
 
 The per-rule breakdown, with what each id catches, is in
-[the presets guide](https://murylloex.github.io/Mini-WAF/guide/presets).
+[the presets guide](https://mini-waf.vercel.app/guide/presets).
 
 Each preset rule already has a `minLevel`; your config `level` decides which ones run.
 
@@ -533,10 +533,9 @@ npm test
 ## Support the project
 
 Mini-WAF is MIT-licensed and maintained in the open. If it protects something
-you run in production, you can fund its maintenance through
-[Open Collective](https://opencollective.com/mini-waf) — rule-set curation,
-the documentation site, and the time that keeps both current. All spending is
-public on the ledger.
+you run in production, you can support its maintenance on
+[Ko-fi](https://ko-fi.com/murylloex) — donations fund rule-set curation, the documentation site, and
+the time that keeps both current.
 
 ## License
 

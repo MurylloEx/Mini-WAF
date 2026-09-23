@@ -20,22 +20,25 @@ npm test
 | `npm run bench:http` | Express HTTP benchmarks → `benchmarks/last-http-run.json` |
 | `npm run bench:compare` | Both suites |
 | `npm run integration` | Build + run `integration/` scenario apps |
-| `npm run docs:dev` | VitePress docs (this site) |
-| `npm run docs:build` | Build static docs |
-| `npm run docs:preview` | Preview the docs build |
+| `npm run docs:dev` | Serve the docs locally on :5173 |
 
-## Docs deployment
+## Docs
 
-Pushing to `master` runs [`.github/workflows/docs.yml`](https://github.com/MurylloEx/Mini-WAF/blob/master/.github/workflows/docs.yml),
-which builds the site with `DOCS_BASE=/Mini-WAF/` and publishes it straight to
-GitHub Pages through `actions/deploy-pages`. There is no `gh-pages` branch to
-maintain, and nothing to do by hand.
+The documentation lives in `docs/` as plain Markdown, rendered in the browser
+with no build step. `docs/_sidebar.md` sets the navigation order, which also
+drives the previous/next links and the search index.
 
-## Images
+```bash
+npm run docs:dev    # http://localhost:5173
+```
 
-Logo and icon live in `.github/assets/`, which VitePress serves as its public
-directory — the README and the site share one copy of each file rather than
-keeping duplicates in sync.
+To add a page, create `docs/guide/<name>.md` and add one line to
+`docs/_sidebar.md`. Link between pages with site paths such as
+`[Presets](/guide/presets)`; `tests/docs-links.test.ts` fails on any link or
+anchor that does not resolve.
+
+The site is deployed to Vercel as static files from `docs/`. See
+`docs/README.md` for the details.
 
 ## Layout
 
@@ -45,7 +48,7 @@ keeping duplicates in sync.
 - `src/presets` — built-in rule packs
 - `src/logging` — optional logger port
 - `integration/` — Express, Fastify, NestJS, Koa samples
-- `docs/` — VitePress documentation
+- `docs/` — this documentation site (plain Markdown)
 - `BENCHMARKS.md` — performance report (update when engine costs change)
 
 ## Guidelines
@@ -57,10 +60,9 @@ keeping duplicates in sync.
 
 ## Funding
 
-Mini-WAF is maintained in the open, unpaid. Contributions through
-[Open Collective](https://opencollective.com/mini-waf) fund rule-set curation,
-the documentation site and the maintenance time behind both — and every
-expense is visible on the public ledger.
+Mini-WAF is maintained in the open, unpaid. Donations on
+[Ko-fi](https://ko-fi.com/murylloex) fund rule-set curation, the documentation site and the
+maintenance time behind both.
 
 ## License
 

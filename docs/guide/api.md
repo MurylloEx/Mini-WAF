@@ -96,4 +96,4 @@ app.use(async (req, res, next) => {
 
 ## Framework modules
 
-Documented with examples in [Quick start](/guide/quick-start) and [Integrations](/guide/integrations/). Types such as `FastifyPluginOptions`, `NestMiniWafOptions`, and `CustomAdapterHandlers` follow the source in `src/fastify.ts`, `src/nestjs.ts`, and `src/adapters/create-adapter.ts`.
+Documented with examples in [Quick start](/guide/quick-start) and [Integrations](/guide/integrations). Types such as `FastifyPluginOptions`, `NestMiniWafOptions`, and `CustomAdapterHandlers` follow the source in `src/fastify.ts`, `src/nestjs.ts`, and `src/adapters/create-adapter.ts`.

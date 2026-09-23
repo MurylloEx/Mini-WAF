@@ -12,8 +12,7 @@ npm run build         # clean, emit CJS + ESM, write dist/*/package.json type ma
 npm run integration   # build, install integration/, run the live-server scenarios
 npm run bench         # engine micro-benchmarks -> benchmarks/last-run.json
 npm run bench:http    # Express HTTP benchmarks -> benchmarks/last-http-run.json
-npm run docs:dev      # VitePress on :5173
-npm run docs:build
+npm run docs:dev      # serve docs/ on :5173 (no build step)
 ```
 
 Single test file / single test:
@@ -85,10 +84,12 @@ The library is Node-only (`node:net`, `node:buffer`, `node:perf_hooks`, `setImme
 
 ## Docs
 
-VitePress in `docs/`, published to GitHub Pages by `.github/workflows/docs.yml` on every push to `master` — there is no `gh-pages` branch. Images live in `.github/assets/`, which VitePress serves as its public dir so the README and the site share one copy.
+`docs/` is a static site with no build step: `index.html` + `assets/app.js` render the Markdown pages in the browser (vendored `marked` + `highlight.js`). `docs/_sidebar.md` is the navigation and also drives the pager and search; `docs/index.md` is the landing page. It is deployed to Vercel (`https://mini-waf.vercel.app`) by the Vercel GitHub integration on every push to `master` that touches `docs/` (project root directory `docs`, no build; `ignoreCommand` in `docs/vercel.json` skips other pushes), with a preview per pull request. `docs/vercel.json` also rewrites page paths to `index.html`, and `scripts/serve-docs.mjs` does the same locally. There is no GitHub Pages site any more.
+
+Pages use real paths (`/guide/presets`), so links in the README and elsewhere stay stable. A section's own page sits beside its folder (`docs/guide/integrations.md`), never inside it as `index.md`: Vercel answers a folder URL with any `index.*` file, so a nested `index.md` would be served as raw Markdown. The site's images are copies in `docs/assets/img/` (the deploy root is `docs/`, so it cannot reach `.github/assets/`, which the README uses).
 
 Two recurring traps:
-- A dead link fails the docs build. Run `npm run docs:build` before pushing.
+- A dead link or anchor fails `tests/docs-links.test.ts`. Its `slugify` must stay identical to the one in `docs/assets/app.js`.
 - Markdown tables split cells on `|` **even inside inline code**; escape it as `\|` (e.g. `ctx.get(name) \|\| undefined`).
 
 Document only APIs that actually exist in `src/**` and `package.json` `exports`. Test helpers such as `createMockContext` are *not* exported from the package — examples that use them are wrong.

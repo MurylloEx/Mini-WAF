@@ -48,7 +48,7 @@ function expandBraces(token: string): readonly string[] {
 
 function markdownFiles(dir: string): readonly string[] {
   return readdirSync(dir).flatMap((entry) => {
-    if (entry === 'node_modules' || entry === '.vitepress') {
+    if (entry === 'node_modules' || entry === 'assets' || entry === '.vercel') {
       return [];
     }
     const full = join(dir, entry);

@@ -92,4 +92,4 @@ app.use(expressWaf(config));
 ## Next
 
 [Quick start](/guide/quick-start) — running in three steps, then the per-framework
-guides under [Integrations](/guide/integrations/).
+guides under [Integrations](/guide/integrations).

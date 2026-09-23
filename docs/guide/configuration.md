@@ -121,7 +121,7 @@ const config: WafConfig = {
 
 ## Engine options (second argument)
 
-`createMiniWaf(config, options?)` and framework helpers accept `WafEngineOptions`, which may include an injectable `logger` (honored only when logging is enabled). Nest / Fastify wrappers also accept `platform` / plugin-specific fields — see [Integrations](/guide/integrations/).
+`createMiniWaf(config, options?)` and framework helpers accept `WafEngineOptions`, which may include an injectable `logger` (honored only when logging is enabled). Nest / Fastify wrappers also accept `platform` / plugin-specific fields — see [Integrations](/guide/integrations).
 
 ## Constants
 

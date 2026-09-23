@@ -131,7 +131,7 @@ bodies.
 
 A rule without `requires` pays a full regex pass on every candidate value.
 Preset rules declare one wherever the pattern allows it; custom regex rules
-should too — see [custom rules](https://murylloex.github.io/Mini-WAF/guide/custom-rules).
+should too — see [custom rules](https://mini-waf.vercel.app/guide/custom-rules).
 
 ## Reproducing
 
