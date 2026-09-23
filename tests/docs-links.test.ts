@@ -132,6 +132,20 @@ describe('docs links', () => {
     expect(nested.map((file) => relative(DOCS, file))).toEqual([]);
   });
 
+  it('shows the released version wherever the site prints one', () => {
+    const { version } = JSON.parse(readFileSync(join(DOCS, '..', 'package.json'), 'utf8')) as {
+      readonly version: string;
+    };
+    const shown = [join(DOCS, 'index.html'), join(DOCS, 'index.md')].flatMap((file) =>
+      [...readFileSync(file, 'utf8').matchAll(/\bv(\d+\.\d+(?:\.\d+)?)\b/g)].map(
+        (m) => `${relative(DOCS, file)}: v${m[1]}`,
+      ),
+    );
+
+    expect(shown.length).toBeGreaterThan(0);
+    expect(shown.filter((entry) => !entry.endsWith(`v${version}`))).toEqual([]);
+  });
+
   it('checks enough links that the scan cannot silently pass', () => {
     const count = PAGES.reduce((total, file) => total + linksIn(file).length, 0);
 

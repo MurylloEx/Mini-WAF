@@ -8,7 +8,7 @@
 <section class="hero">
   <div class="hero-bricks" aria-hidden="true"></div>
   <div class="hero-copy">
-    <span class="eyebrow"><span class="dot"></span> v1.2 · 94 rules · zero dependencies</span>
+    <span class="eyebrow"><span class="dot"></span> v1.2.2 · 94 rules · zero dependencies</span>
     <h1 class="hero-title">A firewall that lives <em>inside</em> your Node app.</h1>
     <p class="hero-lede">Mini-WAF inspects every request against typed, CRS-inspired rules — SQL &amp; NoSQL injection, XSS, Log4Shell, path traversal, RCE and protocol abuse — and blocks it before your route ever runs.</p>
     <div class="hero-actions">
