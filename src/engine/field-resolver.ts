@@ -10,9 +10,9 @@ import {
   type DecodeSettings,
 } from '@/engine/decode';
 
-/** True when any transport decoder is enabled for this request. */
-const NO_ESCAPED: readonly string[] = [];
+const NO_EXTRAS: readonly string[] = [];
 
+/** True when any transport decoder is enabled for this request. */
 function decodeActive(decode: DecodeSettings | undefined): decode is DecodeSettings {
   return decode !== undefined && (decode.base64 || decode.url || decode.comments);
 }
@@ -186,44 +186,46 @@ export function resolveFieldMatchValues(
   field: WafField,
   options: FieldResolveOptions = DEFAULT_OPTIONS,
 ): readonly string[] {
+  // Decoding off (the engine then passes no settings): one property read.
+  // Otherwise the memo comes before the per-decoder flags, since every leaf
+  // condition after a field's first one hits it.
   const decode = options.decode;
-  if (!decodeActive(decode)) {
+  if (decode === undefined) {
     return resolveFieldValues(ctx, field, options);
   }
   const cached = options.memoMatch?.get(field);
   if (cached !== undefined) {
     return cached;
   }
+  if (!decodeActive(decode)) {
+    return resolveFieldValues(ctx, field, options);
+  }
 
   const raw = resolveFieldValues(ctx, field, options);
-  const body =
-    field === 'body' && raw.length > 0
-      ? extractBodyValues(raw[0] ?? '')
-      : undefined;
+  const first = raw[0];
   // A payload delivered as one body *value* (`{"q":"<base64>"}`, `q=<base64>`,
   // a multipart field) or one URL path segment (`/a/<base64>`) is not a
   // whole-value blob on its own — the raw body is `{...}` or `a=1&q=...` and
   // the raw path carries `/` separators. Pull the body values / path segments
   // so the decoders can reach them. They feed the decoders only; the raw value
   // is already scanned.
-  const decodeInput = ((): readonly string[] => {
-    if (raw.length === 0) {
-      return raw;
-    }
-    if (body !== undefined) {
-      return [...raw, ...body.values];
-    }
-    if (field === 'path') {
-      return [...raw, ...extractPathSegments(raw[0] ?? '')];
-    }
-    return raw;
-  })();
+  const body =
+    field === 'body' && first !== undefined
+      ? extractBodyValues(first)
+      : undefined;
+  const pieces =
+    body !== undefined
+      ? body.values
+      : field === 'path' && first !== undefined
+        ? extractPathSegments(first)
+        : NO_EXTRAS;
+  const decodeInput = pieces.length === 0 ? raw : [...raw, ...pieces];
   const base64Extras = expandBase64Candidates(decodeInput, decode);
   const urlExtras = expandUrlCandidates(decodeInput, decode);
   const commentExtras = expandCommentCandidates(decodeInput, decode);
   // JSON strings written with `\u` / `\/` escapes, decoded: what the
   // application receives. Extra candidates, like every decoder's output.
-  const escapedExtras = decode.url ? (body?.escaped ?? NO_ESCAPED) : NO_ESCAPED;
+  const escapedExtras = decode.url ? (body?.escaped ?? NO_EXTRAS) : NO_EXTRAS;
   // No decodable candidate from any decoder: reuse the raw array reference
   // verbatim, so the lowercased resolver below can detect the no-extras case by
   // identity and skip re-lowering a possibly large body.
@@ -256,19 +258,23 @@ export function resolveFieldMatchValuesLower(
   options: FieldResolveOptions = DEFAULT_OPTIONS,
 ): readonly string[] {
   const decode = options.decode;
-  if (!decodeActive(decode)) {
+  if (decode === undefined) {
     return resolveFieldValuesLower(ctx, field, options);
   }
   const cached = options.memoMatchLower?.get(field);
   if (cached !== undefined) {
     return cached;
   }
+  if (!decodeActive(decode)) {
+    return resolveFieldValuesLower(ctx, field, options);
+  }
 
   const merged = resolveFieldMatchValues(ctx, field, options);
   const rawLower = resolveFieldValuesLower(ctx, field, options);
-  // `merged === raw` (same reference) means no extras were appended.
+  // `merged` is the raw array itself (same reference) when no extras were
+  // appended; otherwise it is longer than the raw values.
   const lowered =
-    merged === resolveFieldValues(ctx, field, options)
+    merged.length === rawLower.length
       ? rawLower
       : [
           ...rawLower,

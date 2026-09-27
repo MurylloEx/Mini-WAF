@@ -33,13 +33,31 @@ export interface DecodeSettings {
   readonly comments: boolean;
 }
 
-/** Shared empty result so `values === rawValues` when nothing decodes. */
-const NO_EXTRAS: readonly string[] = [];
+/** What a raw body hides a payload in, beyond its own text. */
+export interface BodyValues {
+  /**
+   * Long JSON string leaves, form values or multipart field contents: decoder
+   * input, since a payload in one of them is not a whole-value blob inside the
+   * body.
+   */
+  readonly values: readonly string[];
+  /**
+   * The JSON strings (keys and values) written with `\u` or `\/` escapes,
+   * decoded: the text the application receives, which the raw body only shows
+   * escaped.
+   */
+  readonly escaped: readonly string[];
+}
+
+// ---------------------------------------------------------------------------
+// Limits
+// ---------------------------------------------------------------------------
 
 /**
  * Minimum length before a value is even considered Base64. Short tokens carry
  * no useful attack payload once decoded and are the noisiest false-positive
- * source for the shape test.
+ * source for the shape test. Also the floor for the pieces split out of a path
+ * or body: shorter ones could never pass it.
  */
 const MIN_BASE64_LENGTH = 16;
 
@@ -58,6 +76,73 @@ const MAX_DECODED_CANDIDATES = 16;
  * the expensive regex battery ever runs on them.
  */
 const MAX_NONPRINTABLE_RATIO = 0.1;
+
+/** Bound the path split so a pathological path cannot fan the rescan out. */
+const MAX_PATH_SEGMENTS = 24;
+
+/**
+ * Bound the values pulled out of one body (JSON leaves, form values, multipart
+ * fields), and the JSON walk, so a hostile body cannot blow up the scan.
+ */
+const MAX_BODY_VALUES = 64;
+const MAX_JSON_DEPTH = 6;
+
+// ---------------------------------------------------------------------------
+// Shared helpers
+// ---------------------------------------------------------------------------
+
+/** Shared empty result so `values === rawValues` when nothing decodes. */
+const NO_EXTRAS: readonly string[] = [];
+
+/**
+ * `pick` applied to each item, keeping the defined results up to `limit`. The
+ * shared empty array stands for "nothing", so callers can test by identity and
+ * clean traffic allocates nothing.
+ */
+function collect<T>(
+  items: readonly T[],
+  limit: number,
+  pick: (item: T) => string | undefined,
+): readonly string[] {
+  // Allocated on the first pick: most fields yield nothing, and this runs for
+  // every field of every request. A sanctioned mutable accumulator (see
+  // CLAUDE.md "avoid let"), capped so a hostile input cannot fan out.
+  let out: string[] | undefined;
+  for (const item of items) {
+    const picked = pick(item);
+    if (picked !== undefined) {
+      if (out === undefined) {
+        out = [picked];
+      } else {
+        out.push(picked);
+      }
+      if (out.length >= limit) {
+        break;
+      }
+    }
+  }
+  return out ?? NO_EXTRAS;
+}
+
+/** `value` when it is long enough to carry a Base64 payload. */
+function longEnough(value: string): string | undefined {
+  return value.length >= MIN_BASE64_LENGTH ? value : undefined;
+}
+
+function safeParseJson(raw: string): JsonValue | undefined {
+  try {
+    // JSON.parse is typed `any`; land it straight into a typed binding so no
+    // `any` escapes into the module.
+    const parsed: JsonValue = JSON.parse(raw);
+    return parsed;
+  } catch {
+    return undefined;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Base64
+// ---------------------------------------------------------------------------
 
 /**
  * Whole-value standard Base64 shape. Anchored: any value carrying a space, `@`,
@@ -92,7 +177,9 @@ function isMostlyPrintable(buffer: Buffer): boolean {
   // of being walked to the end.
   const maxNonPrintable = Math.floor(length * MAX_NONPRINTABLE_RATIO);
   // Hot byte loop: a single mutable counter is the sanctioned accumulator here
-  // (see CLAUDE.md "avoid let"). Allow tab / LF / CR plus printable ASCII.
+  // (see CLAUDE.md "avoid let"). Counting with a regex over a latin1 copy
+  // loses the early exit and measured ~10x slower on binary blobs. Allow
+  // tab / LF / CR plus printable ASCII.
   let nonPrintable = 0;
   for (const byte of buffer) {
     const printable =
@@ -138,16 +225,34 @@ export function expandBase64Candidates(
   if (!settings.base64) {
     return NO_EXTRAS;
   }
-  const shaped = values.filter(looksLikeBase64);
-  if (shaped.length === 0) {
-    return NO_EXTRAS;
+  // One pass, allocating only for a decoded value: this runs for every field
+  // of every request and almost never finds one. The cap counts shaped values,
+  // before decoding, so it bounds the decode work itself. Sanctioned mutable
+  // accumulators (see CLAUDE.md "avoid let").
+  let out: string[] | undefined;
+  let shaped = 0;
+  for (const value of values) {
+    if (looksLikeBase64(value)) {
+      const decoded = decodeBase64(value);
+      if (decoded !== undefined) {
+        if (out === undefined) {
+          out = [decoded];
+        } else {
+          out.push(decoded);
+        }
+      }
+      shaped += 1;
+      if (shaped >= MAX_DECODED_CANDIDATES) {
+        break;
+      }
+    }
   }
-  const decoded = shaped
-    .slice(0, MAX_DECODED_CANDIDATES)
-    .map(decodeBase64)
-    .filter((value): value is string => value !== undefined);
-  return decoded.length === 0 ? NO_EXTRAS : decoded;
+  return out ?? NO_EXTRAS;
 }
+
+// ---------------------------------------------------------------------------
+// Percent-encoding
+// ---------------------------------------------------------------------------
 
 /**
  * Percent-decode a single value once, but only when it is worth it: a value
@@ -179,23 +284,14 @@ export function expandUrlCandidates(
   values: readonly string[],
   settings: DecodeSettings,
 ): readonly string[] {
-  if (!settings.url) {
-    return NO_EXTRAS;
-  }
-  // Sanctioned mutable accumulator (see CLAUDE.md "avoid let"): a const array
-  // grown in place, capped so a value list full of escapes cannot fan out.
-  const decoded: string[] = [];
-  for (const value of values) {
-    if (decoded.length >= MAX_DECODED_CANDIDATES) {
-      break;
-    }
-    const one = decodeUrlOnce(value);
-    if (one !== undefined) {
-      decoded.push(one);
-    }
-  }
-  return decoded.length === 0 ? NO_EXTRAS : decoded;
+  return settings.url
+    ? collect(values, MAX_DECODED_CANDIDATES, decodeUrlOnce)
+    : NO_EXTRAS;
 }
+
+// ---------------------------------------------------------------------------
+// Inline SQL comments
+// ---------------------------------------------------------------------------
 
 /**
  * A single inline SQL comment used as a token separator. Three deliberate
@@ -235,25 +331,14 @@ export function expandCommentCandidates(
   values: readonly string[],
   settings: DecodeSettings,
 ): readonly string[] {
-  if (!settings.comments) {
-    return NO_EXTRAS;
-  }
-  // Sanctioned mutable accumulator (see CLAUDE.md "avoid let").
-  const stripped: string[] = [];
-  for (const value of values) {
-    if (stripped.length >= MAX_DECODED_CANDIDATES) {
-      break;
-    }
-    const one = stripInlineSqlComments(value);
-    if (one !== undefined) {
-      stripped.push(one);
-    }
-  }
-  return stripped.length === 0 ? NO_EXTRAS : stripped;
+  return settings.comments
+    ? collect(values, MAX_DECODED_CANDIDATES, stripInlineSqlComments)
+    : NO_EXTRAS;
 }
 
-/** Bound the path split so a pathological path cannot fan the rescan out. */
-const MAX_PATH_SEGMENTS = 24;
+// ---------------------------------------------------------------------------
+// URL path segments
+// ---------------------------------------------------------------------------
 
 /**
  * Split a URL path into its `/`-separated segments so a payload delivered as one
@@ -265,38 +350,85 @@ const MAX_PATH_SEGMENTS = 24;
  * carry a Base64 payload are kept, and the split is count-bounded.
  */
 export function extractPathSegments(raw: string): readonly string[] {
-  if (raw.indexOf('/') === -1) {
+  // A path shorter than one segment's floor cannot hold a long segment.
+  if (raw.length < MIN_BASE64_LENGTH || raw.indexOf('/') === -1) {
     return NO_EXTRAS;
   }
-  // Sanctioned mutable accumulator (see CLAUDE.md "avoid let").
-  const out: string[] = [];
-  for (const segment of raw.split('/')) {
-    if (out.length >= MAX_PATH_SEGMENTS) {
-      break;
+  return collect(raw.split('/'), MAX_PATH_SEGMENTS, longEnough);
+}
+
+// ---------------------------------------------------------------------------
+// Body values: JSON, multipart and urlencoded form
+// ---------------------------------------------------------------------------
+
+/**
+ * Split a raw body the way a framework's body parsers would: JSON, then
+ * multipart, then urlencoded form. A body the framework already parsed arrives
+ * as JSON and takes the first branch. Bounded in depth and count.
+ */
+export function extractBodyValues(raw: string): BodyValues {
+  if (startsLikeJson(raw)) {
+    if (!worthParsingAsJson(raw)) {
+      return NO_BODY_VALUES;
     }
-    if (segment.length >= MIN_BASE64_LENGTH) {
-      out.push(segment);
+    const parsed = safeParseJson(raw);
+    if (parsed !== undefined) {
+      return { values: jsonValues(parsed), escaped: escapedJsonStrings(raw) };
     }
   }
-  return out.length === 0 ? NO_EXTRAS : out;
+  const delimiter = multipartDelimiter(raw);
+  if (delimiter !== undefined) {
+    return { values: multipartValues(raw, delimiter), escaped: NO_EXTRAS };
+  }
+  return {
+    values: looksLikeForm(raw) ? formValues(raw) : NO_EXTRAS,
+    escaped: NO_EXTRAS,
+  };
+}
+
+// --- JSON -------------------------------------------------------------------
+
+const NO_BODY_VALUES: BodyValues = { values: NO_EXTRAS, escaped: NO_EXTRAS };
+
+/**
+ * A string literal with at least {@link MIN_BASE64_LENGTH} units of content,
+ * an escape counting once.
+ */
+const LONG_JSON_LITERAL = new RegExp(
+  `"(?:[^"\\\\]|\\\\[\\s\\S]){${MIN_BASE64_LENGTH}}`,
+);
+
+/**
+ * Whether the body opens like JSON: '{' (0x7b), '[' (0x5b) or '"' (0x22).
+ * Anything else is not a JSON container or string worth parsing, so non-JSON
+ * bodies pay nothing beyond this check.
+ */
+function startsLikeJson(raw: string): boolean {
+  const first = raw.trimStart().charCodeAt(0);
+  return first === 0x7b || first === 0x5b || first === 0x22;
 }
 
 /**
- * Bound the values pulled out of one body (JSON leaves, form values, multipart
- * fields), and the JSON walk, so a hostile body cannot blow up the scan.
+ * Whether parsing a JSON-looking body can find anything, checked in one cheap
+ * pass instead of a parse:
+ * - a decoded string is never longer than its literal, so without a literal of
+ *   {@link MIN_BASE64_LENGTH} units no string leaf is long enough;
+ * - without a `\u` or `\/` escape there is no escaped string to decode;
+ * - without a `=` an invalid body could not be read as a form either.
  */
-const MAX_BODY_VALUES = 64;
-const MAX_JSON_DEPTH = 6;
+function worthParsingAsJson(raw: string): boolean {
+  return (
+    LONG_JSON_LITERAL.test(raw) ||
+    nextHidingEscape(raw, 0) !== -1 ||
+    raw.includes('=')
+  );
+}
 
-function safeParseJson(raw: string): JsonValue | undefined {
-  try {
-    // JSON.parse is typed `any`; land it straight into a typed binding so no
-    // `any` escapes into the module.
-    const parsed: JsonValue = JSON.parse(raw);
-    return parsed;
-  } catch {
-    return undefined;
-  }
+/** The long string leaves of a parsed JSON body, depth- and count-bounded. */
+function jsonValues(parsed: JsonValue): readonly string[] {
+  const out: string[] = [];
+  collectJsonStrings(parsed, 0, out);
+  return out.length === 0 ? NO_EXTRAS : out;
 }
 
 function collectJsonStrings(
@@ -329,102 +461,32 @@ function collectJsonStrings(
 }
 
 /**
- * The body parsed as JSON. Gated by a one-char sniff so non-JSON bodies pay
- * nothing beyond that check.
+ * The JSON strings (keys and values) written with `\u` or `\/` escapes,
+ * decoded by the JSON parser. Only valid JSON reaches here, so each escape is
+ * found directly and nothing else in the body is walked. Capped like every
+ * decoder's output.
+ *
+ * The cursors here and in the helpers below are the sanctioned `let`s (see
+ * CLAUDE.md "avoid let"): `indexOf` jumps from one backslash or quote to the
+ * next, while matching every string literal with `matchAll` measured 30-40x
+ * slower on a body holding an escape, and recursion would overflow the stack
+ * on a long run of backslashes.
  */
-function parseJsonBody(raw: string): JsonValue | undefined {
-  const first = raw.trimStart().charCodeAt(0);
-  // '{' (0x7b), '[' (0x5b), '"' (0x22) — anything else is not a JSON container
-  // or string worth parsing.
-  if (first !== 0x7b && first !== 0x5b && first !== 0x22) {
-    return undefined;
-  }
-  return safeParseJson(raw);
-}
-
-/**
- * The delimiter line of a `multipart/form-data` body (`--<boundary>`), when the
- * body starts with one.
- */
-function multipartDelimiter(raw: string): string | undefined {
-  if (!raw.startsWith('--')) {
-    return undefined;
-  }
-  const line = raw.split(/[\r\n]/, 1)[0] ?? '';
-  return line.length > 2 && !/\s/.test(line) ? line : undefined;
-}
-
-/**
- * The contents of a multipart body's form fields. File parts are skipped:
- * frameworks hand them over as uploads, not as body values.
- */
-function multipartValues(raw: string, delimiter: string): readonly string[] {
+function escapedJsonStrings(raw: string): readonly string[] {
   const out: string[] = [];
-  for (const segment of raw.split(delimiter).slice(1)) {
-    if (segment.startsWith('--') || out.length >= MAX_BODY_VALUES) {
+  let escape = nextHidingEscape(raw, 0);
+  while (escape !== -1 && out.length < MAX_DECODED_CANDIDATES) {
+    const literal = enclosingLiteral(raw, escape);
+    if (literal === undefined) {
       break;
     }
-    const part = segment.replace(/^[\r\n]+/, '');
-    const split = part.includes('\r\n\r\n') ? '\r\n\r\n' : '\n\n';
-    const cut = part.indexOf(split);
-    if (cut === -1 || /filename=/i.test(part.slice(0, cut))) {
-      continue;
+    const decoded = safeParseJson(raw.slice(literal.start, literal.end + 1));
+    if (typeof decoded === 'string') {
+      out.push(decoded);
     }
-    const content = part.slice(cut + split.length).replace(/[\r\n]+$/, '');
-    if (content.length >= MIN_BASE64_LENGTH) {
-      out.push(content);
-    }
+    escape = nextHidingEscape(raw, literal.end + 1);
   }
-  return out;
-}
-
-/**
- * A body shaped like `application/x-www-form-urlencoded`: it holds a `=` and
- * is not markup (XML attributes hold `=` too).
- */
-function looksLikeForm(raw: string): boolean {
-  return raw.includes('=') && !raw.trimStart().startsWith('<');
-}
-
-/** Percent-decode a form component (`+` is a space); malformed stays as is. */
-function decodeFormComponent(value: string): string {
-  const spaced = value.replace(/\+/g, ' ');
-  try {
-    return decodeURIComponent(spaced);
-  } catch {
-    return spaced;
-  }
-}
-
-/** The form-decoded values of a urlencoded body. */
-function formValues(raw: string): readonly string[] {
-  const out: string[] = [];
-  for (const pair of raw.split('&')) {
-    if (out.length >= MAX_BODY_VALUES) {
-      break;
-    }
-    const eq = pair.indexOf('=');
-    if (eq === -1) {
-      continue;
-    }
-    const value = decodeFormComponent(pair.slice(eq + 1));
-    if (value.length >= MIN_BASE64_LENGTH) {
-      out.push(value);
-    }
-  }
-  return out;
-}
-
-/**
- * Whether the `"` at `quote` is unescaped: an odd run of backslashes before it
- * escapes it.
- */
-function isUnescapedQuote(raw: string, quote: number): boolean {
-  let backslashes = 0;
-  while (raw.charAt(quote - 1 - backslashes) === '\\') {
-    backslashes += 1;
-  }
-  return backslashes % 2 === 0;
+  return out.length === 0 ? NO_EXTRAS : out;
 }
 
 /**
@@ -464,65 +526,96 @@ function enclosingLiteral(
 }
 
 /**
- * The JSON strings (keys and values) written with `\u` or `\/` escapes,
- * decoded by the JSON parser. Only valid JSON reaches here, so each escape is
- * found directly and nothing else in the body is walked. Capped like every
- * decoder's output.
+ * Whether the `"` at `quote` is unescaped: an odd run of backslashes before it
+ * escapes it.
  */
-function escapedJsonStrings(raw: string): readonly string[] {
-  const out: string[] = [];
-  let escape = nextHidingEscape(raw, 0);
-  while (escape !== -1 && out.length < MAX_DECODED_CANDIDATES) {
-    const literal = enclosingLiteral(raw, escape);
-    if (literal === undefined) {
-      break;
-    }
-    const decoded = safeParseJson(raw.slice(literal.start, literal.end + 1));
-    if (typeof decoded === 'string') {
-      out.push(decoded);
-    }
-    escape = nextHidingEscape(raw, literal.end + 1);
+function isUnescapedQuote(raw: string, quote: number): boolean {
+  let backslashes = 0;
+  while (raw.charAt(quote - 1 - backslashes) === '\\') {
+    backslashes += 1;
   }
-  return out.length === 0 ? NO_EXTRAS : out;
+  return backslashes % 2 === 0;
 }
 
-/** What a raw body hides a payload in, beyond its own text. */
-export interface BodyValues {
-  /**
-   * Long JSON string leaves, form values or multipart field contents: decoder
-   * input, since a payload in one of them is not a whole-value blob inside the
-   * body.
-   */
-  readonly values: readonly string[];
-  /**
-   * The JSON strings (keys and values) written with `\u` or `\/` escapes,
-   * decoded: the text the application receives, which the raw body only shows
-   * escaped.
-   */
-  readonly escaped: readonly string[];
+// --- multipart/form-data ----------------------------------------------------
+
+/**
+ * The delimiter line of a `multipart/form-data` body (`--<boundary>`), when the
+ * body starts with one.
+ */
+function multipartDelimiter(raw: string): string | undefined {
+  if (!raw.startsWith('--')) {
+    return undefined;
+  }
+  const line = raw.split(/[\r\n]/, 1)[0] ?? '';
+  return line.length > 2 && !/\s/.test(line) ? line : undefined;
 }
 
 /**
- * Split a raw body the way a framework's body parsers would: JSON, then
- * multipart, then urlencoded form. A body the framework already parsed arrives
- * as JSON and takes the first branch. Bounded in depth and count.
+ * The contents of a multipart body's form fields, up to the closing delimiter
+ * (`--<boundary>--`). File parts are skipped: frameworks hand them over as
+ * uploads, not as body values.
  */
-export function extractBodyValues(raw: string): BodyValues {
-  const parsed = parseJsonBody(raw);
-  if (parsed !== undefined) {
-    const out: string[] = [];
-    collectJsonStrings(parsed, 0, out);
-    return {
-      values: out.length === 0 ? NO_EXTRAS : out,
-      escaped: escapedJsonStrings(raw),
-    };
+function multipartValues(raw: string, delimiter: string): readonly string[] {
+  const parts = raw.split(delimiter).slice(1);
+  const closing = parts.findIndex((part) => part.startsWith('--'));
+  const fields = closing === -1 ? parts : parts.slice(0, closing);
+  return collect(fields, MAX_BODY_VALUES, multipartFieldContent);
+}
+
+/** The content of a multipart form field, or undefined for a file part. */
+function multipartFieldContent(segment: string): string | undefined {
+  const part = segment.replace(/^[\r\n]+/, '');
+  const separator = part.includes('\r\n\r\n') ? '\r\n\r\n' : '\n\n';
+  const headersEnd = part.indexOf(separator);
+  if (headersEnd === -1 || /filename=/i.test(part.slice(0, headersEnd))) {
+    return undefined;
   }
-  const delimiter = multipartDelimiter(raw);
-  const values =
-    delimiter !== undefined
-      ? multipartValues(raw, delimiter)
-      : looksLikeForm(raw)
-        ? formValues(raw)
-        : NO_EXTRAS;
-  return { values, escaped: NO_EXTRAS };
+  return longEnough(
+    part.slice(headersEnd + separator.length).replace(/[\r\n]+$/, ''),
+  );
+}
+
+// --- application/x-www-form-urlencoded --------------------------------------
+
+/**
+ * A body shaped like `application/x-www-form-urlencoded`: it holds a `=` and
+ * is not markup (XML attributes hold `=` too).
+ */
+function looksLikeForm(raw: string): boolean {
+  return raw.includes('=') && !raw.trimStart().startsWith('<');
+}
+
+/** The form-decoded values of a urlencoded body. */
+function formValues(raw: string): readonly string[] {
+  return collect(raw.split('&'), MAX_BODY_VALUES, formValue);
+}
+
+/**
+ * The decoded value of a `name=value` pair, when long enough. Form-decoding
+ * never lengthens a value, so a short one is dropped before decoding.
+ */
+function formValue(pair: string): string | undefined {
+  const eq = pair.indexOf('=');
+  if (eq === -1 || pair.length - eq - 1 < MIN_BASE64_LENGTH) {
+    return undefined;
+  }
+  return longEnough(decodeFormComponent(pair.slice(eq + 1)));
+}
+
+/**
+ * Percent-decode a form component (`+` is a space); malformed stays as is.
+ * A value without `+` or `%` comes back untouched, with no work.
+ */
+function decodeFormComponent(value: string): string {
+  // A global regex beats `replaceAll('+', ' ')` here (measured on V8).
+  const spaced = value.includes('+') ? value.replace(/\+/g, ' ') : value;
+  if (!spaced.includes('%')) {
+    return spaced;
+  }
+  try {
+    return decodeURIComponent(spaced);
+  } catch {
+    return spaced;
+  }
 }
