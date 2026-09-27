@@ -10,12 +10,13 @@ conclusions about your hardware.
 
 | Case | Rules | Result |
 |------|------:|--------|
-| Engine baseline (`A0`, no rules) | 0 | ~397k ops/s, p50 ~1.1 µs |
-| Balanced clean allow (`A1`) | 44 | ~68k ops/s, p50 ~12.3 µs |
-| + `decisionCache` hits (`A2`) | 44 | ~407k ops/s, p50 ~2.0 µs |
-| Low clean allow (`A6-low`) | 19 | ~132k ops/s, p50 ~6.9 µs |
-| ~8KB body (`A3`) | 44 | ~7.4k ops/s, p50 ~129 µs |
-| Express tiny GET, WAF on vs off (`B0`→`B1`) | 44 | ~−21% req/s, ~+27% p50 |
+| Engine baseline (`A0`, no rules) | 0 | ~369k ops/s, p50 ~1.2 µs |
+| Balanced clean allow (`A1`) | 50 | ~63k ops/s, p50 ~13.4 µs |
+| + `decisionCache` hits (`A2`) | 50 | ~395k ops/s, p50 ~2.1 µs |
+| Low clean allow (`A6-low`) | 19 | ~137k ops/s, p50 ~6.8 µs |
+| High clean allow, decode on (`A6-high`) | 80 | ~37k ops/s, p50 ~25.9 µs |
+| ~8KB body (`A3`) | 50 | ~7.3k ops/s, p50 ~134 µs |
+| Express tiny GET, WAF on vs off (`B0`→`B1`) | 50 | ~−21% req/s, ~+27% p50 |
 
 The HTTP delta is the number to reason about for capacity planning: in a real
 server the rule scan is a small slice of the request, so a ~40% engine-level

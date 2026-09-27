@@ -32,10 +32,10 @@ obfuscated attack can no longer slip a plaintext pattern:
   (`q=<base64>`).
 - **URL** — a value carrying a `%XX` escape is percent-decoded once, reaching
   payloads sent percent-encoded on surfaces the framework does not decode itself
-  (URL path segments, multipart parts, raw bodies). A raw JSON body whose
-  strings use `\uXXXX` or `\/` escapes is scanned with them resolved in place,
-  as a JSON parser would read it, instead of as sent (`<` stays escaped, for
-  `preset-xss-encoded-tag`).
+  (URL path segments, multipart parts, raw bodies). A JSON string in a raw body
+  written with `\uXXXX` or `\/` escapes is also scanned decoded, as a JSON
+  parser would read it; the body itself is still scanned as sent (so `\u003c`
+  stays visible to `preset-xss-encoded-tag`).
 - **Comments** — inline SQL comments used as token separators
   (`SELECT/**/value/**/FROM`, the `space2comment` sqlmap tamper) are stripped so
   the keyword-adjacency SQLi patterns see the payload. Versioned `/*!…*/`

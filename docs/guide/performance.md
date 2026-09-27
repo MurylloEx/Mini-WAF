@@ -4,7 +4,7 @@ Mini-WAF includes optional knobs to bound CPU and memory without external cache 
 
 ## How much does it cost?
 
-At `balanced` with the `default` pack, a clean request costs roughly **12 µs**
+At `balanced` with the `default` pack, a clean request costs roughly **13 µs**
 of engine time; at `low`, about **7 µs**. End to end on a real Express server
 that is around **20% fewer req/s** on tiny GETs.
 
@@ -130,15 +130,17 @@ parameters is 6 runs, not 2. Two consequences:
 - `high`/`paranoid` auto-enable Base64, percent (URL) **and** inline-SQL-comment
   decoding. On clean traffic the three add a memoized per-field shape check (a
   Base64 char-class/length test, a `String.includes('%')` test and a
-  `String.indexOf('/*')` test) — measured at **≈ +10 %** of the high/paranoid
-  scan — and normalize only values that actually look like a Base64 blob, carry a
+  `String.indexOf('/*')` test) — measured at **≈ +10–15 %** of the
+  high/paranoid scan — and normalize only values that actually look like a Base64 blob, carry a
   `%XX` escape that changes on decode, or contain a `/*` comment; all three are
   **off**, and free, at `low`/`balanced`. A body is split once (memoized) into
   its JSON string values, form values or multipart fields to expose them to the
-  same decoders, bounded in depth and count (≈ +5–8 % on an 8 KB form or
-  multipart body). A raw JSON body with `\uXXXX` or `\/` escapes is scanned
-  with them resolved in place *instead of* as sent, so it costs one linear pass
-  over the body (≈ +3 % on a 6 KB body), not a second scan.
+  same decoders, bounded in depth and count (≈ +6–20 % on a 3–8 KB body where
+  nothing decodes). A JSON string literal written with `\uXXXX` or `\/`
+  escapes is added, decoded, as an extra candidate, and a form body carrying a
+  `%XX` escape is rescanned once percent-decoded — that is real decoding work
+  (up to ≈ ×2 on a form body), capped at 16 extra candidates per decoder and
+  field. The raw value is always scanned as sent.
   Set `decode: { base64: false, url: false, comments: false }` to opt out.
 
 ## Regex caveats

@@ -5,7 +5,7 @@ What Mini-WAF costs in practice on the current engine. Numbers below come from
 `npm run bench` / `npm run bench:http`). Harness details live in
 [`benchmarks/README.md`](./benchmarks/README.md).
 
-**Machine:** 16× AMD Ryzen 7 5700X3D, Node v24.15.0. Relative only — re-run
+**Machine:** 16× AMD Ryzen 7 5700X3D, Node v24.14.1. Relative only — re-run
 locally before drawing conclusions about your hardware.
 
 ## Engine results (`A0`–`A7`)
@@ -15,18 +15,18 @@ Latencies in microseconds.
 
 | ID | What it measures | Rules | ops/s | p50 | p95 | p99 |
 |----|-------------------|------:|------:|----:|----:|----:|
-| **A0** | Baseline `handle()` with zero rules | 0 | 389.22k/s | 1.10 µs | 4.50 µs | 7.40 µs |
-| **A1** | `default` + `balanced`, clean allow | 50 | 58.77k/s | 13.70 µs | 31.20 µs | 40.50 µs |
-| **A2** | A1 + `decisionCache` (hits after warmup) | 50 | 373.80k/s | 2.00 µs | 4.30 µs | 6.40 µs |
-| **A3** | A1 + ~8KB JSON body | 50 | 7.17k/s | 131.70 µs | 169.30 µs | 212.10 µs |
-| **A4** | A1 + small (~24B) body | 50 | 64.43k/s | 14.40 µs | 18.80 µs | 30.60 µs |
-| **A5** | A1 SQLi — block path (early-exit) | 50 | 108.47k/s | 8.60 µs | 9.80 µs | 18.20 µs |
-| **A6-low** | `level: 'low'` clean allow | 19 | 130.84k/s | 6.90 µs | 9.90 µs | 15.40 µs |
-| **A6-balanced** | `level: 'balanced'` clean allow | 50 | 67.94k/s | 13.30 µs | 21.00 µs | 30.40 µs |
-| **A6-high** | `level: 'high'` clean allow | 80 | 33.94k/s | 28.10 µs | 34.50 µs | 44.50 µs |
-| **A6-paranoid** | `level: 'paranoid'` clean allow | 93 | 30.75k/s | 31.00 µs | 38.20 µs | 52.10 µs |
-| **A7-y0** | Paranoid, `ruleYieldEvery: 0` | 93 | 30.84k/s | 30.90 µs | 38.90 µs | 55.80 µs |
-| **A7-y32** | Paranoid, `ruleYieldEvery: 32` | 93 | 29.98k/s | 31.90 µs | 39.00 µs | 53.40 µs |
+| **A0** | Baseline `handle()` with zero rules | 0 | 369.19k/s | 1.18 µs | 3.88 µs | 7.07 µs |
+| **A1** | `default` + `balanced`, clean allow | 50 | 63.36k/s | 13.44 µs | 29.18 µs | 35.10 µs |
+| **A2** | A1 + `decisionCache` (hits after warmup) | 50 | 394.65k/s | 2.09 µs | 3.22 µs | 5.21 µs |
+| **A3** | A1 + ~8KB JSON body | 50 | 7.26k/s | 133.86 µs | 156.50 µs | 163.52 µs |
+| **A4** | A1 + small (~24B) body | 50 | 66.51k/s | 14.37 µs | 15.71 µs | 22.12 µs |
+| **A5** | A1 SQLi — block path (early-exit) | 50 | 110.17k/s | 8.56 µs | 9.73 µs | 15.01 µs |
+| **A6-low** | `level: 'low'` clean allow | 19 | 136.90k/s | 6.82 µs | 8.00 µs | 11.46 µs |
+| **A6-balanced** | `level: 'balanced'` clean allow | 50 | 71.03k/s | 13.22 µs | 16.72 µs | 21.11 µs |
+| **A6-high** | `level: 'high'` clean allow | 80 | 37.11k/s | 25.88 µs | 31.11 µs | 36.81 µs |
+| **A6-paranoid** | `level: 'paranoid'` clean allow | 93 | 33.37k/s | 29.04 µs | 33.14 µs | 39.92 µs |
+| **A7-y0** | Paranoid, `ruleYieldEvery: 0` | 93 | 33.81k/s | 28.86 µs | 31.20 µs | 38.42 µs |
+| **A7-y32** | Paranoid, `ruleYieldEvery: 32` | 93 | 33.28k/s | 29.29 µs | 31.75 µs | 39.22 µs |
 
 > `A1`–`A5` run the `balanced` pack minus `preset-dos-rate-limit`, hence 50
 > rules where `A6-balanced` reports 51.
@@ -35,9 +35,9 @@ Latencies in microseconds.
 
 **Highlights**
 
-- **A0 → A1**: 50 rules → ~15% of baseline ops/s (+12.6 µs p50).
+- **A0 → A1**: 50 rules → ~17% of baseline ops/s (+12.3 µs p50).
 - **A1 → A2**: `decisionCache` on a repeated fingerprint is ~6× faster
-  (59k → 374k ops/s) and is unaffected by rule count — the cheapest win
+  (63k → 395k ops/s) and is unaffected by rule count — the cheapest win
   available for traffic with repeated shapes.
 - **A4 → A3**: ~8KB body is still the costly path (~11% of small-body ops/s) —
   see [Known inherent costs](#known-inherent-costs).
@@ -51,20 +51,31 @@ Latencies in microseconds.
   stripping. On clean traffic (nothing decodes) the three normalizers add a
   per-field memoized shape check (a Base64 char-class/length test, a
   `String.includes('%')` test and a `String.indexOf('/*')` test) — an isolated
-  decode-on vs decode-off measurement at `high` puts this at **≈ +10 %** of the
-  `A6-high` scan (in the +10–15 % band), and **zero** at `low`/`balanced` (the
-  match path is byte-for-byte identical when decoding is off). Work only runs
-  when a value is actually a Base64 blob surviving the shape + printable gates,
-  actually carries a `%XX` escape that changes on decode, or actually contains a
-  `/*` comment. A body is additionally split once (memoized, depth/count
-  bounded) into its JSON string values, form values or multipart fields so
-  they reach the same decoders: ≈ +8 % on an ~8 KB form body, ≈ +5 % on a
-  multipart one, nothing on text or JSON. A raw JSON body with `\uXXXX` or
-  `\/` escapes is scanned with them resolved in place *instead of* as sent
-  (≈ +3 % on a 6 KB body). Rescanning a re-serialized copy on top of the raw
-  body cost ≈ ×1.9 and was dropped; resolving in place also keeps duplicate
-  keys, which a parse would lose. Set
-  `decode: { base64: false, url: false, comments: false }` to opt out at high+.
+  decode-on vs decode-off measurement at `high` puts this at **≈ +10–15 %** of
+  the `A6-high` scan, and **zero** at `low`/`balanced` (the match path is
+  byte-for-byte identical when decoding is off). Work only runs when a value is
+  actually a Base64 blob surviving the shape + printable gates, actually carries
+  a `%XX` escape that changes on decode, or actually contains a `/*` comment,
+  and each decoder adds at most 16 candidates per field. A body is
+  additionally split once (memoized, depth/count bounded) into its JSON string
+  values, form values or multipart fields so they reach the same decoders.
+  Measured decode-on vs decode-off at `high` on POST bodies:
+
+  | Body | Added cost |
+  |------|-----------:|
+  | ~8 KB JSON, one long value | ≈ +6 % |
+  | ~6 KB JSON, ~270 short string values | ≈ +17 % |
+  | ~3.4 KB form, nothing encoded | ≈ +20 % |
+  | ~6.5 KB JSON, many literals with `\uXXXX` / `\/` escapes | ≈ +40 % |
+  | ~3.7 KB form carrying `%XX` escapes | ≈ ×2 |
+
+  The last two are the decoders doing their job: a JSON string literal written
+  with `\uXXXX` / `\/` escapes is added, decoded, as an extra candidate (the
+  raw body is still scanned as sent, duplicate keys included), and a form body
+  with a `%XX` escape is rescanned once percent-decoded. A JSON body with no
+  string literal of 16+ characters, no such escape and no `=` cannot yield a
+  candidate, so it skips `JSON.parse` entirely. Set `decode: { base64: false, url: false, comments: false }` to opt
+  out at high+.
 
 ## HTTP results (`B0`/`B1`, `C0`–`C3`)
 
@@ -97,7 +108,7 @@ compare allow pairs only when judging overhead.
 
 ### Large body regex (`A3`)
 
-An ~8KB body at the default `maxFieldLength` cap (~129 µs p50 vs ~13 µs for a
+An ~8KB body at the default `maxFieldLength` cap (~134 µs p50 vs ~14 µs for a
 tiny body) is the worst engine case. Cost is the sum of many
 `RegExp.test()` calls against the payload — not redundant truncation or
 lowercasing (fields are memoized once per request).
