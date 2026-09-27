@@ -56,8 +56,14 @@ Latencies in microseconds.
   match path is byte-for-byte identical when decoding is off). Work only runs
   when a value is actually a Base64 blob surviving the shape + printable gates,
   actually carries a `%XX` escape that changes on decode, or actually contains a
-  `/*` comment. A JSON body is additionally parsed once (memoized, depth/count
-  bounded) so its string values reach the same decoders. Set
+  `/*` comment. A body is additionally split once (memoized, depth/count
+  bounded) into its JSON string values, form values or multipart fields so
+  they reach the same decoders: ≈ +8 % on an ~8 KB form body, ≈ +5 % on a
+  multipart one, nothing on text or JSON. A raw JSON body with `\uXXXX` or
+  `\/` escapes is scanned with them resolved in place *instead of* as sent
+  (≈ +3 % on a 6 KB body). Rescanning a re-serialized copy on top of the raw
+  body cost ≈ ×1.9 and was dropped; resolving in place also keeps duplicate
+  keys, which a parse would lose. Set
   `decode: { base64: false, url: false, comments: false }` to opt out at high+.
 
 ## HTTP results (`B0`/`B1`, `C0`–`C3`)

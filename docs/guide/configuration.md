@@ -81,13 +81,16 @@ const config: WafConfig = {
 
   // Transport decoding, three independent normalizers that rescan a
   // decoded/de-obfuscated value with the existing rules:
-  //   base64   — a whole field value (query / cookies), or a single JSON body
-  //              value like {"q":"<base64>"}, that is one Base64 blob (padded or
-  //              unpadded) is decoded; closes encoders that wrap an attack in
+  //   base64   — a whole field value (query / cookies), or a single body value
+  //              (a JSON string like {"q":"<base64>"}, a form value or a
+  //              multipart field of a raw body), that is one Base64 blob (padded
+  //              or unpadded) is decoded; closes encoders that wrap an attack in
   //              Base64.
   //   url      — a value carrying a `%XX` escape is percent-decoded once; reaches
   //              payloads sent percent-encoded on surfaces the framework does not
-  //              decode itself (URL path, multipart parts, raw bodies).
+  //              decode itself (URL path, multipart parts, raw bodies). A raw
+  //              JSON body with \uXXXX or \/ escapes is scanned with them
+  //              resolved in place instead of as sent.
   //   comments — inline SQL comments used as token separators
   //              (SELECT/**/value/**/FROM, the `space2comment` tamper) are
   //              stripped so keyword-adjacency SQLi rules match; versioned
@@ -115,7 +118,7 @@ const config: WafConfig = {
 | `ruleYieldEvery` | `number` | `32` | Yield interval; `0` = never |
 | `maxRateLimitKeys` | `number` | `10000` | Cap distinct rate-limit keys |
 | `decisionCache` | `{ max?, ttlMs? }` | off | Decision LRU; auto-off if any active rule has `rateLimit` |
-| `decode` | `{ base64?, url?, comments? }` | auto-on at `high`+ | Decode whole-value Base64 (query/cookies + JSON body values) and percent-encoding, and strip inline SQL comments, then rescan; off at `low`/`balanced` |
+| `decode` | `{ base64?, url?, comments? }` | auto-on at `high`+ | Decode whole-value Base64 (query/cookies + JSON, form and multipart body values) and percent-encoding, resolve `\u` escapes of a raw JSON body, and strip inline SQL comments, then rescan; off at `low`/`balanced` |
 
 `WafPresetName`: `'default' | 'sqli' | 'xss' | 'scanners' | 'path-traversal' | 'rfi' | 'rce' | 'protocol'`.
 

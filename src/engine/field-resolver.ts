@@ -5,12 +5,14 @@ import {
   expandBase64Candidates,
   expandCommentCandidates,
   expandUrlCandidates,
-  extractJsonStringValues,
+  extractBodyValues,
   extractPathSegments,
   type DecodeSettings,
 } from '@/engine/decode';
 
 /** True when any transport decoder is enabled for this request. */
+const NO_ESCAPED: readonly string[] = [];
+
 function decodeActive(decode: DecodeSettings | undefined): decode is DecodeSettings {
   return decode !== undefined && (decode.base64 || decode.url || decode.comments);
 }
@@ -194,18 +196,22 @@ export function resolveFieldMatchValues(
   }
 
   const raw = resolveFieldValues(ctx, field, options);
-  // A payload delivered as one JSON body *value* (`{"q":"<base64>"}`) or one URL
-  // path segment (`/a/<base64>`) is not a whole-value blob on its own — the raw
-  // body is `{...}` and the raw path carries `/` separators. Pull the JSON
-  // string leaves / path segments so the decoders can reach them. Feeds the
-  // decoders only; the raw value is already scanned, so no plaintext candidate
-  // is added.
+  const body =
+    field === 'body' && raw.length > 0
+      ? extractBodyValues(raw[0] ?? '')
+      : undefined;
+  // A payload delivered as one body *value* (`{"q":"<base64>"}`, `q=<base64>`,
+  // a multipart field) or one URL path segment (`/a/<base64>`) is not a
+  // whole-value blob on its own — the raw body is `{...}` or `a=1&q=...` and
+  // the raw path carries `/` separators. Pull the body values / path segments
+  // so the decoders can reach them. They feed the decoders only; the raw value
+  // is already scanned.
   const decodeInput = ((): readonly string[] => {
     if (raw.length === 0) {
       return raw;
     }
-    if (field === 'body') {
-      return [...raw, ...extractJsonStringValues(raw[0] ?? '')];
+    if (body !== undefined) {
+      return [...raw, ...body.values];
     }
     if (field === 'path') {
       return [...raw, ...extractPathSegments(raw[0] ?? '')];
@@ -215,15 +221,25 @@ export function resolveFieldMatchValues(
   const base64Extras = expandBase64Candidates(decodeInput, decode);
   const urlExtras = expandUrlCandidates(decodeInput, decode);
   const commentExtras = expandCommentCandidates(decodeInput, decode);
+  // JSON strings written with `\u` / `\/` escapes, decoded: what the
+  // application receives. Extra candidates, like every decoder's output.
+  const escapedExtras = decode.url ? (body?.escaped ?? NO_ESCAPED) : NO_ESCAPED;
   // No decodable candidate from any decoder: reuse the raw array reference
   // verbatim, so the lowercased resolver below can detect the no-extras case by
   // identity and skip re-lowering a possibly large body.
   const merged =
     base64Extras.length === 0 &&
     urlExtras.length === 0 &&
-    commentExtras.length === 0
+    commentExtras.length === 0 &&
+    escapedExtras.length === 0
       ? raw
-      : [...raw, ...base64Extras, ...urlExtras, ...commentExtras];
+      : [
+          ...raw,
+          ...base64Extras,
+          ...urlExtras,
+          ...commentExtras,
+          ...escapedExtras,
+        ];
 
   options.memoMatch?.set(field, merged);
   return merged;

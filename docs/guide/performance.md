@@ -133,8 +133,12 @@ parameters is 6 runs, not 2. Two consequences:
   `String.indexOf('/*')` test) — measured at **≈ +10 %** of the high/paranoid
   scan — and normalize only values that actually look like a Base64 blob, carry a
   `%XX` escape that changes on decode, or contain a `/*` comment; all three are
-  **off**, and free, at `low`/`balanced`. A JSON body is parsed once (memoized)
-  to expose its string values to the same decoders, bounded in depth and count.
+  **off**, and free, at `low`/`balanced`. A body is split once (memoized) into
+  its JSON string values, form values or multipart fields to expose them to the
+  same decoders, bounded in depth and count (≈ +5–8 % on an 8 KB form or
+  multipart body). A raw JSON body with `\uXXXX` or `\/` escapes is scanned
+  with them resolved in place *instead of* as sent, so it costs one linear pass
+  over the body (≈ +3 % on a 6 KB body), not a second scan.
   Set `decode: { base64: false, url: false, comments: false }` to opt out.
 
 ## Regex caveats

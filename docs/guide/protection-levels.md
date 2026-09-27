@@ -27,11 +27,15 @@ that rescan a decoded/de-obfuscated value with the same rules so an encoded or
 obfuscated attack can no longer slip a plaintext pattern:
 
 - **Base64** — a whole field value that is a single Base64 blob (padded or
-  unpadded), such as a query/cookie value or one JSON body value like
-  `{"q":"<base64>"}`.
+  unpadded), such as a query/cookie value, one JSON body value like
+  `{"q":"<base64>"}`, or one form or multipart field of a raw body
+  (`q=<base64>`).
 - **URL** — a value carrying a `%XX` escape is percent-decoded once, reaching
   payloads sent percent-encoded on surfaces the framework does not decode itself
-  (URL path segments, multipart parts, raw bodies).
+  (URL path segments, multipart parts, raw bodies). A raw JSON body whose
+  strings use `\uXXXX` or `\/` escapes is scanned with them resolved in place,
+  as a JSON parser would read it, instead of as sent (`<` stays escaped, for
+  `preset-xss-encoded-tag`).
 - **Comments** — inline SQL comments used as token separators
   (`SELECT/**/value/**/FROM`, the `space2comment` sqlmap tamper) are stripped so
   the keyword-adjacency SQLi patterns see the payload. Versioned `/*!…*/`

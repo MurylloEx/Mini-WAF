@@ -6,7 +6,7 @@ import {
   expandBase64Candidates,
   expandCommentCandidates,
   expandUrlCandidates,
-  extractJsonStringValues,
+  extractBodyValues,
   extractPathSegments,
 } from '@/engine/decode';
 import { createMockContext } from './helpers/mock-context';
@@ -159,28 +159,75 @@ describe('expandCommentCandidates', () => {
   });
 });
 
-describe('extractJsonStringValues', () => {
+describe('extractBodyValues', () => {
+  const values = (raw: string): readonly string[] => extractBodyValues(raw).values;
+
   it('pulls long string leaves from an object', () => {
     const blob = b64('1 UNION SELECT a FROM b');
-    expect(extractJsonStringValues(`{"q":"${blob}"}`)).toContain(blob);
+    expect(values(`{"q":"${blob}"}`)).toContain(blob);
   });
 
   it('walks nested arrays and objects', () => {
     const blob = b64('<body onload=alert(1)> padding here');
-    const values = extractJsonStringValues(
-      `{"a":{"b":["${blob}"]}}`,
-    );
-    expect(values).toContain(blob);
+    expect(values(`{"a":{"b":["${blob}"]}}`)).toContain(blob);
   });
 
   it('drops short strings below the Base64 floor', () => {
-    expect(extractJsonStringValues('{"a":"short","b":"tiny"}')).toHaveLength(0);
+    expect(values('{"a":"short","b":"tiny"}')).toHaveLength(0);
+    expect(values('name=value&other=thing')).toHaveLength(0);
   });
 
-  it('returns nothing for non-JSON bodies without parsing', () => {
-    expect(extractJsonStringValues('name=value&other=thing')).toHaveLength(0);
-    expect(extractJsonStringValues('just some free text here')).toHaveLength(0);
-    expect(extractJsonStringValues('{ not valid json')).toHaveLength(0);
+  it('returns nothing for free text, invalid JSON or markup', () => {
+    expect(values('just some free text here')).toHaveLength(0);
+    expect(values('{ not valid json')).toHaveLength(0);
+    expect(values('<a href="0123456789abcdefgh">')).toHaveLength(0);
+  });
+
+  it('form-decodes the values of a urlencoded body', () => {
+    const blob = b64('1 UNION SELECT a FROM b');
+    expect(values(`x=1&q=${blob}`)).toEqual([blob]);
+    expect(values('q=union+select%20password+from+users')).toEqual([
+      'union select password from users',
+    ]);
+  });
+
+  it('pulls multipart field contents but not file parts', () => {
+    const blob = b64('1 UNION SELECT a FROM b');
+    const body = [
+      '--XyZ',
+      'Content-Disposition: form-data; name="q"',
+      '',
+      blob,
+      '--XyZ',
+      'Content-Disposition: form-data; name="f"; filename="a.txt"',
+      '',
+      b64('file contents are not body values'),
+      '--XyZ--',
+      '',
+    ].join('\r\n');
+    expect(values(body)).toEqual([blob]);
+    expect(values('--not a delimiter\r\n')).toHaveLength(0);
+  });
+
+  it('decodes the JSON strings written with \\u or \\/ escapes', () => {
+    const escaped = (raw: string): readonly string[] =>
+      extractBodyValues(raw).escaped;
+    expect(escaped(String.raw`{"test": true, "q": "\u003cscript\u003e\/x"}`)).toEqual([
+      '<script>/x',
+    ]);
+    // Keys count, and a duplicate key a parser would drop is still seen.
+    expect(
+      escaped(String.raw`{"\u0071": 1, "q": "\u0027 or 1=1", "q": "x"}`),
+    ).toEqual(['q', "' or 1=1"]);
+    expect(escaped(String.raw`["\ud83d\ude00", "plain"]`)).toEqual(['😀']);
+  });
+
+  it('skips strings without hiding escapes', () => {
+    const escaped = (raw: string): readonly string[] =>
+      extractBodyValues(raw).escaped;
+    expect(escaped(String.raw`{"q": "<b>", "r": "a\nb \"c\""}`)).toHaveLength(0);
+    expect(escaped(String.raw`{"path": "C:\\users\\u0041"}`)).toHaveLength(0);
+    expect(escaped(String.raw`a=\u003c`)).toHaveLength(0);
   });
 });
 
@@ -298,6 +345,45 @@ describe('engine base64 decode layer', () => {
     });
   });
 
+  describe('base64 inside a raw form or multipart body', () => {
+    it('decodes a base64 form value', async () => {
+      const waf = createMiniWaf({ presets: ['default'], level: 'high' });
+      const { ctx } = createMockContext({
+        method: 'POST',
+        body: `name=alice&q=${sqliBlob}`,
+      });
+      const result = await waf.handle(ctx);
+      expect(result.matchedRule?.id).toMatch(/^preset-sqli/);
+    });
+
+    it('decodes a base64 multipart field', async () => {
+      const waf = createMiniWaf({ presets: ['default'], level: 'high' });
+      const { ctx } = createMockContext({
+        method: 'POST',
+        body: [
+          '--boundary42',
+          'Content-Disposition: form-data; name="q"',
+          '',
+          sqliBlob,
+          '--boundary42--',
+          '',
+        ].join('\r\n'),
+      });
+      const result = await waf.handle(ctx);
+      expect(result.matchedRule?.id).toMatch(/^preset-sqli/);
+    });
+
+    it('stays off at balanced', async () => {
+      const waf = createMiniWaf({ presets: ['default'], level: 'balanced' });
+      const { ctx } = createMockContext({
+        method: 'POST',
+        body: `name=alice&q=${sqliBlob}`,
+      });
+      const result = await waf.handle(ctx);
+      expect(result.decision).toBe('allow');
+    });
+  });
+
   describe('false positives at high (decode on)', () => {
     const benign: readonly [string, string][] = [
       ['dashless uuid', '550e8400e29b41d4a716446655440000'],
@@ -393,6 +479,37 @@ describe('engine url decode layer', () => {
     const { ctx } = createMockContext({ path: `/download/${blob}` });
     const result = await waf.handle(ctx);
     expect(result.decision).toBe('block');
+  });
+
+  it('scans the raw JSON body alongside its decoded strings', async () => {
+    // The decoded strings are extra candidates: the raw body is still scanned,
+    // so `\u003c<tag>` stays visible at `high`.
+    const body = String.raw`{"q": "\u003ciframe src=//evil.example\u003e"}`;
+    for (const level of ['balanced', 'high'] as const) {
+      const waf = createMiniWaf({ presets: ['default'], level });
+      const result = await waf.handle(
+        createMockContext({ method: 'POST', body }).ctx,
+      );
+      expect(result.matchedRule?.id).toBe('preset-xss-encoded-tag');
+    }
+  });
+
+  it('resolves JSON escapes in a raw body', async () => {
+    // What a JSON parser hands the framework: `1 union select ...`.
+    const body =
+      '{"test": true, "q": "1\\u0020union\\u0020select' +
+      '\\u0020password\\u0020from\\u0020users"}';
+    const on = createMiniWaf({ presets: ['default'], level: 'high' });
+    const off = createMiniWaf({
+      presets: ['default'],
+      level: 'high',
+      decode: { url: false },
+    });
+    const request = { method: 'POST', body };
+    const blocked = await on.handle(createMockContext(request).ctx);
+    expect(blocked.matchedRule?.id).toMatch(/^preset-sqli/);
+    const allowed = await off.handle(createMockContext(request).ctx);
+    expect(allowed.decision).toBe('allow');
   });
 
   it('does not flag a benign opaque path segment at high', async () => {
